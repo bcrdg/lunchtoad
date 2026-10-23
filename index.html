@@ -3170,6 +3170,145 @@ document.getElementById('soundCheck').addEventListener('change', e => {
 });
 
 init();
+
+// ---- Debug panel ----
+// Open sonoralunchtoad.com/?debug to show a small toolbox for testing visit
+// rewards, fireworks, the crown, coupons and resets. It stays on in that tab
+// (sessionStorage "lt_debug") until you press CLOSE. Anyone who knows the link
+// can open it; it only changes that person's own browser.
+const DEBUG_KEY = 'lt_debug';
+function debugOn() {
+  try {
+    if (new URLSearchParams(location.search).has('debug')) sessionStorage.setItem(DEBUG_KEY, '1');
+    return sessionStorage.getItem(DEBUG_KEY) === '1';
+  } catch (e) { return false; }
+}
+function showDebugPanel() {
+  const css = document.createElement('style');
+  css.textContent = `
+    .debug-panel { position: fixed; right: 10px; bottom: 10px; z-index: 200; width: min(320px, calc(100vw - 20px));
+      max-height: 80vh; overflow: auto; background: #0F0F1A; color: #FFF8E7; border: 3px solid #FFD23F;
+      border-radius: 14px; padding: 10px 12px; font: 500 13px/1.35 ui-monospace, Consolas, monospace;
+      box-shadow: 4px 4px 0 #000; }
+    .debug-panel.min .debug-body { display: none; }
+    .debug-panel h3 { font: 700 13px ui-monospace, Consolas, monospace; color: #FFD23F; display: flex;
+      justify-content: space-between; align-items: center; gap: 6px; margin: 0; }
+    .debug-panel .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+    .debug-panel button, .debug-panel select, .debug-panel input { font: 600 12px ui-monospace, Consolas, monospace;
+      background: #FFF8E7; color: #0F0F1A; border: 2px solid #FFD23F; border-radius: 8px; padding: 3px 7px; cursor: pointer; }
+    .debug-panel input { width: 5em; cursor: text; }
+    .debug-panel button.danger { background: #FF3E8F; color: #FFF8E7; }
+    .debug-panel .lbl { opacity: 0.7; min-width: 5.5em; }
+    .debug-panel pre { white-space: pre-wrap; word-break: break-all; font-size: 11px; background: #1B1147;
+      border-radius: 8px; padding: 6px; margin-top: 8px; max-height: 30vh; overflow: auto; }
+    .debug-panel .note { opacity: 0.7; font-size: 11px; margin-top: 6px; }`;
+  document.head.appendChild(css);
+
+  const panel = document.createElement('div');
+  panel.className = 'debug-panel';
+  panel.setAttribute('role', 'region');
+  panel.setAttribute('aria-label', 'Debug panel');
+  const milestones = Object.keys(MILESTONES).map(Number);
+  panel.innerHTML = `
+    <h3><span>🐸 TOAD DEBUG</span><span><button data-d="min" title="Minimize">_</button> <button data-d="close" title="Turn debug off">CLOSE</button></span></h3>
+    <div class="debug-body">
+      <div class="row"><span class="lbl">Visits</span><b data-v="visits"></b>
+        <input type="number" min="0" max="99999" data-v="setVisits" aria-label="Set visits">
+        <button data-d="setVisits">SET</button><button data-d="newVisit">+1 VISIT</button></div>
+      <div class="row"><span class="lbl">Fireworks</span>
+        <select data-v="milestone" aria-label="Milestone">${milestones.map(m => `<option value="${m}">${m}: ${MILESTONES[m].title}</option>`).join('')}</select>
+        <button data-d="fireworks">PLAY</button></div>
+      <div class="row"><span class="lbl">Crown</span><b data-v="king"></b><button data-d="king">TOGGLE</button></div>
+      <div class="row"><span class="lbl">Coupons</span><b data-v="coupons"></b>
+        <button data-d="couponTest">TEST MODE</button><button data-d="clearCoupons">CLEAR</button></div>
+      <div class="row"><span class="lbl">Reset</span>
+        <button data-d="resetLook">TOAD LOOK</button><button data-d="resetSpins">SPIN COUNT</button>
+        <button data-d="resetKoks">KOKS JOKE</button></div>
+      <div class="row"><button class="danger" data-d="wipe">WIPE ALL SITE DATA</button>
+        <button data-d="dump">SHOW SAVED DATA</button></div>
+      <pre data-v="dump" hidden></pre>
+      <p class="note">"+1 visit" reloads as a new visit, so milestone fireworks fire like they would for real.</p>
+    </div>`;
+  document.body.appendChild(panel);
+
+  const $ = sel => panel.querySelector(sel);
+  function refresh() {
+    $('[data-v="visits"]').textContent = visitCount;
+    $('[data-v="setVisits"]').value = visitCount;
+    $('[data-v="king"]').textContent = getCookie(KING_COOKIE) === '1' ? 'ON' : 'off';
+    let test = false;
+    try { test = sessionStorage.getItem('lt_coupon_test') === '1'; } catch (e) {}
+    $('[data-v="coupons"]').textContent = activeCoupons().length + ' saved · test ' + (test ? 'ON' : 'off');
+  }
+  function lastMilestoneAtOrBelow(n) {
+    const passed = milestones.filter(m => m <= n);
+    return passed.length ? passed[passed.length - 1] : 0;
+  }
+  function setVisitsAndReload(n, asNewVisit) {
+    // asNewVisit: store n-1 and let the reload count +1, so fireworks fire naturally
+    const stored = asNewVisit ? n - 1 : n;
+    setCookie(VISITS_COOKIE, String(stored), 365);
+    storageSet(CELEBRATED_KEY, String(lastMilestoneAtOrBelow(stored)));
+    try {
+      if (asNewVisit) sessionStorage.removeItem(VISIT_COUNTED_KEY);
+      else sessionStorage.setItem(VISIT_COUNTED_KEY, '1');
+    } catch (e) {}
+    location.replace(location.pathname);
+  }
+  const actions = {
+    min() { panel.classList.toggle('min'); },
+    close() { try { sessionStorage.removeItem(DEBUG_KEY); } catch (e) {} panel.remove(); },
+    setVisits() {
+      const n = Math.max(0, Math.min(99999, parseInt($('[data-v="setVisits"]').value, 10) || 0));
+      setVisitsAndReload(n, false);
+    },
+    newVisit() { setVisitsAndReload(visitCount + 1, true); },
+    fireworks() { celebrateUnlock(parseInt($('[data-v="milestone"]').value, 10)); },
+    king() {
+      if (getCookie(KING_COOKIE) === '1') { deleteCookie(KING_COOKIE); document.body.classList.remove('king'); }
+      else { setCookie(KING_COOKIE, '1', 400); document.body.classList.add('king'); }
+    },
+    couponTest() {
+      try {
+        if (sessionStorage.getItem('lt_coupon_test') === '1') sessionStorage.removeItem('lt_coupon_test');
+        else sessionStorage.setItem('lt_coupon_test', '1');
+        couponTest = sessionStorage.getItem('lt_coupon_test') === '1';
+      } catch (e) {}
+    },
+    clearCoupons() { storageRemove(COUPONS_KEY); updateCouponButton(); },
+    resetLook() {
+      eyeColor = ''; toadHat = ''; toadSkin = '';
+      ['eyeColor', 'hatPick', 'skinPick'].forEach(id => { document.getElementById(id).value = ''; });
+      applyEyeColor(''); applyHat(''); applySkin('');
+      saveFilters();
+    },
+    resetSpins() { setSpins(0); },
+    resetKoks() { deleteCookie(KOKS_COOKIE); },
+    wipe() {
+      if (!confirm('Wipe ALL Lunch Toad data in this browser (visits, rewards, crown, coupons, saved filters)?')) return;
+      document.cookie.split(';').map(c => c.split('=')[0].trim()).filter(Boolean).forEach(deleteCookie);
+      try { localStorage.clear(); } catch (e) {}
+      try { sessionStorage.clear(); sessionStorage.setItem(DEBUG_KEY, '1'); } catch (e) {}
+      location.replace(location.pathname);
+    },
+    dump() {
+      const pre = $('[data-v="dump"]');
+      if (!pre.hidden) { pre.hidden = true; return; }
+      const local = {}, session = {};
+      try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); local[k] = localStorage.getItem(k); } } catch (e) {}
+      try { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); session[k] = sessionStorage.getItem(k); } } catch (e) {}
+      pre.textContent = 'COOKIES\n' + (document.cookie.split('; ').join('\n') || '(none)') +
+        '\n\nLOCAL STORAGE\n' + JSON.stringify(local, null, 1) + '\n\nSESSION STORAGE\n' + JSON.stringify(session, null, 1);
+      pre.hidden = false;
+    },
+  };
+  panel.addEventListener('click', e => {
+    const act = e.target.dataset && e.target.dataset.d;
+    if (act && actions[act]) { actions[act](); if (panel.isConnected) refresh(); }
+  });
+  refresh();
+}
+if (debugOn()) showDebugPanel();
 </script>
 
 </body>
