@@ -142,6 +142,38 @@ canvas { display: block; }
 .pad .down { grid-column: 2; grid-row: 2; }
 .pad .right { grid-column: 3; grid-row: 2; }
 .help { font-size: 0.8rem; font-weight: 500; opacity: 0.7; margin-top: 10px; }
+/* Overlays can get tall with the leaderboard: let them scroll on small screens. */
+#startScreen, #overScreen { justify-content: flex-start; overflow-y: auto; padding-top: 16px; }
+#startScreen > :first-child, #overScreen > :first-child { margin-top: auto; }
+#startScreen > :last-child, #overScreen > :last-child { margin-bottom: auto; }
+.board-wrap {
+  background: rgba(255, 248, 231, 0.08);
+  border: 2px dashed rgba(255, 248, 231, 0.3);
+  border-radius: 14px;
+  padding: 8px 14px;
+  min-width: 220px;
+}
+.board-title { font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 1.5px; color: var(--yellow); font-size: 0.9rem; }
+.board { list-style: none; font-size: 0.85rem; font-weight: 600; margin-top: 4px; text-align: left; }
+.board li { display: grid; grid-template-columns: 1.6em 3.2em 1fr auto; gap: 6px; padding: 1px 0; }
+.board li .lvl { opacity: 0.6; font-weight: 500; }
+.board li.me { color: var(--yellow); }
+.board li.board-empty { display: block; text-align: center; opacity: 0.7; font-weight: 500; }
+.initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
+.initials-row { display: flex; gap: 8px; }
+.initials input {
+  width: 4.2em;
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.4rem;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: 4px 6px;
+  color: var(--ink);
+}
+.btn.small { font-size: 0.95rem; padding: 6px 16px; box-shadow: 3px 3px 0 var(--ink); }
 .back { margin-top: 18px; }
 @media (hover: hover) and (pointer: fine) { .pad { display: none; } }
 </style>
@@ -165,7 +197,10 @@ canvas { display: block; }
          a restaurant kitchen, an old mine shaft, New Melones Lake and Dodge Ridge.
          Fill all five spots at the top to clear a level.</p>
       <button class="btn" id="startBtn">START</button>
-      <p class="help" id="bestStart"></p>
+      <div class="board-wrap">
+        <div class="board-title">🏆 TOP TOADS</div>
+        <ol class="board" id="boardStart"><li class="board-empty">Loading…</li></ol>
+      </div>
     </div>
     <div class="overlay banner" id="banner" hidden>
       <div class="kicker" id="bannerKicker">LEVEL 1</div>
@@ -175,6 +210,17 @@ canvas { display: block; }
     <div class="overlay" id="overScreen" hidden>
       <h2 id="overTitle">GAME OVER</h2>
       <p id="overText"></p>
+      <form class="initials" id="initialsForm" hidden>
+        <label for="initials">You made the board! Your initials:</label>
+        <div class="initials-row">
+          <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AAA">
+          <button class="btn small" type="submit" id="saveScore">SAVE</button>
+        </div>
+      </form>
+      <div class="board-wrap">
+        <div class="board-title">🏆 TOP TOADS</div>
+        <ol class="board" id="boardOver"></ol>
+      </div>
       <button class="btn" id="againBtn">PLAY AGAIN</button>
     </div>
   </div>
@@ -207,12 +253,13 @@ canvas { display: block; }
 // ---------------------------------------------------------------------------
 const COLS = 11, ROWS = 13;
 const GOAL_COLS = [1, 3, 5, 7, 9];
-const TIME_PER_LIFE = 30;
+const TIME_PER_LIFE = 45;
+const START_LIVES = 5;
 const BEST_KEY = 'lt_toadroad_best';
 
 // Default speeds (tiles/sec, negative = left) and spacing for each section.
-const RIDE_SPEEDS = [1.1, -1.5, 1.8, -1.2, 1.5];
-const ROAD_SPEEDS = [-2.4, 1.9, -1.1, 1.4]; // rows 8, 9, 10, 11
+const RIDE_SPEEDS = [0.8, -1.0, 1.2, -0.9, 1.0];
+const ROAD_SPEEDS = [-1.6, 1.3, -0.8, 1.0]; // rows 8, 9, 10, 11
 
 const LEVELS = [
   {
@@ -363,12 +410,15 @@ let lives, score, level, filled, timeLeft, bestRow, best;
 let burst;      // { x|null, timer, warn }
 let bannerTimer = 0;
 
-function speedMult() { return 1 + 0.12 * (level - 1); }
+function speedMult() { return 1 + 0.08 * (level - 1); }
 function levelDef(n) { return LEVELS[(n - 1) % LEVELS.length]; }
 
 function makeLane(row, kind, def, speed) {
   const lane = { ...def, row, kind, speed, items: [] };
-  const step = def.len + def.gap;
+  // Easier spacing: more room between hazards, more platforms to land on.
+  const gap = kind === 'road' ? def.gap + 1 : Math.max(1, def.gap - 1);
+  lane.gap = gap;
+  const step = def.len + gap;
   const count = Math.ceil((COLS + def.len + 2) / step) + 1;
   lane.span = count * step;
   const offset = Math.random() * step;
@@ -392,7 +442,7 @@ function buildLevel() {
 }
 
 function resetBurst() {
-  burst = { x: null, timer: 3 + Math.random() * 4, warn: false };
+  burst = { x: null, timer: 5 + Math.random() * 5, warn: false };
 }
 
 function resetToad() {
@@ -411,7 +461,7 @@ function showBanner() {
 }
 
 function newGame() {
-  lives = 3; score = 0; level = 1;
+  lives = START_LIVES; score = 0; level = 1;
   filled = GOAL_COLS.map(() => false);
   buildLevel();
   resetToad();
@@ -448,6 +498,7 @@ const KEYS = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
 };
 document.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return; // typing initials, not playing
   const dir = KEYS[e.code];
   if (dir) { e.preventDefault(); move(dir); }
   if ((e.code === 'Space' || e.code === 'Enter') && (state === 'start' || state === 'over')) { e.preventDefault(); newGame(); }
@@ -513,10 +564,10 @@ function update(dt) {
   const b = L.burst;
   if (burst.x === null) {
     burst.timer -= dt;
-    burst.warn = burst.timer < 1.4;
+    burst.warn = burst.timer < 2.2;
     if (burst.timer <= 0) burst.x = b.speed < 0 ? COLS + 1 : -b.len - 1;
   } else {
-    burst.x += b.speed * mult * dt;
+    burst.x += b.speed * 0.75 * mult * dt; // trains etc. a bit slower than their defs
     if ((b.speed < 0 && burst.x + b.len < -1) || (b.speed > 0 && burst.x > COLS + 1)) resetBurst();
   }
 
@@ -539,7 +590,7 @@ function update(dt) {
   timeLeft -= dt;
   if (timeLeft <= 0) { die('time'); return; }
 
-  const t0 = toad.col + 0.18, t1 = toad.col + 0.82;
+  const t0 = toad.col + 0.26, t1 = toad.col + 0.74; // forgiving hitbox
   if (toad.row === 7) {
     if (burst.x !== null && overlaps(t0, t1, burst.x, burst.x + b.len)) die('splat');
     return;
@@ -550,22 +601,168 @@ function update(dt) {
     if (lane.items.some(it => overlaps(t0, t1, it.x, it.x + lane.len))) die('splat');
   } else if (lane.kind === 'ride') {
     const center = toad.col + 0.5;
-    const ride = lane.items.find(it => center >= it.x && center <= it.x + lane.len);
+    const ride = lane.items.find(it => center >= it.x - 0.15 && center <= it.x + lane.len + 0.15);
     if (!ride) { die(L.ride.death); return; }
     toad.col += lane.speed * mult * dt;
     if (toad.col < -0.4 || toad.col > COLS - 0.6) die(L.ride.death);
   }
 }
 
-function gameOver() {
-  state = 'over';
-  const isBest = score > best;
-  if (isBest) { best = score; try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {} }
-  document.getElementById('overTitle').textContent = isBest && score > 0 ? 'NEW HIGH SCORE!' : 'GAME OVER';
-  document.getElementById('overText').textContent =
-    `Score ${score} · Level ${level} (${L.name}) · Best ${best}. The Toad never made it to lunch.`;
-  document.getElementById('overScreen').hidden = false;
+// ---------------------------------------------------------------------------
+// High scores: a shared top-10 board stored in a JSONbin.io bin.
+//
+// 🥪 Hey, you found the key! Yes, it's sitting here in public on purpose. It's a
+// JSONbin "Access Key" that can only read and update this one high-score bin.
+// If you found it: congrats, you're our kind of nerd. Please don't wreck the
+// leaderboard. Instead, tell us through the contact form on sonoralunchtoad.com
+// and the Toad will buy you a sandwich. Seriously. Any sandwich in Sonora.
+//
+// If JSONBIN_BIN_ID or JSONBIN_KEY is blank (or JSONbin is down), the board falls
+// back to this device only (localStorage).
+// ---------------------------------------------------------------------------
+const JSONBIN_BIN_ID = '';
+const JSONBIN_KEY = '';
+const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+const BOARD_SIZE = 10;
+const LOCAL_BOARD_KEY = 'lt_toadroad_board';
+const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ'];
+
+function onlineBoard() { return !!(JSONBIN_BIN_ID && JSONBIN_KEY); }
+
+function cleanBoard(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter(e => e && /^[A-Z0-9]{1,3}$/.test(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
+    .map(e => ({ name: e.name, score: e.score, level: Math.max(1, Math.min(999, parseInt(e.level, 10) || 1)), date: String(e.date || '').slice(0, 10) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, BOARD_SIZE);
 }
+
+function localBoard() {
+  try { return cleanBoard(JSON.parse(localStorage.getItem(LOCAL_BOARD_KEY) || '[]')); } catch (e) { return []; }
+}
+
+async function loadBoard() {
+  if (!onlineBoard()) return localBoard();
+  const res = await fetch(JSONBIN_URL + '/latest', {
+    headers: { 'X-Access-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false' },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('board ' + res.status);
+  const data = await res.json();
+  return cleanBoard(data.scores);
+}
+
+async function saveToBoard(entry) {
+  // Keep a local copy either way.
+  const mine = cleanBoard([...localBoard(), entry]);
+  try { localStorage.setItem(LOCAL_BOARD_KEY, JSON.stringify(mine)); } catch (e) {}
+  if (!onlineBoard()) return mine;
+  // Read-modify-write. Two people saving in the same second could clobber each
+  // other; for a toad game, that's fine.
+  const board = cleanBoard([...(await loadBoard()), entry]);
+  const res = await fetch(JSONBIN_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Access-Key': JSONBIN_KEY },
+    body: JSON.stringify({ scores: board }),
+  });
+  if (!res.ok) throw new Error('save ' + res.status);
+  return board;
+}
+
+function qualifies(board, s) {
+  return s > 0 && (board.length < BOARD_SIZE || s > board[board.length - 1].score);
+}
+
+function renderBoard(el, board, highlight) {
+  el.innerHTML = '';
+  if (!board.length) {
+    const li = document.createElement('li');
+    li.className = 'board-empty';
+    li.textContent = 'No scores yet. Be the first toad!';
+    el.appendChild(li);
+    return;
+  }
+  board.forEach((e, i) => {
+    const li = document.createElement('li');
+    if (highlight && e === highlight) li.className = 'me';
+    [String(i + 1) + '.', e.name, e.score.toLocaleString(), 'L' + e.level].forEach((t, k) => {
+      const span = document.createElement('span');
+      if (k === 3) span.className = 'lvl';
+      span.textContent = t;
+      li.appendChild(span);
+    });
+    el.appendChild(li);
+  });
+}
+
+function boardError(el) {
+  el.innerHTML = '<li class="board-empty">Leaderboard is napping. Try again later.</li>';
+}
+
+async function refreshStartBoard() {
+  const el = document.getElementById('boardStart');
+  try { renderBoard(el, await loadBoard()); } catch (e) { boardError(el); }
+}
+
+let lastBoard = [];
+async function gameOver() {
+  state = 'over';
+  const finalScore = score, finalLevel = level;
+  const isBest = finalScore > best;
+  if (isBest) { best = finalScore; try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {} }
+  document.getElementById('overTitle').textContent = isBest && finalScore > 0 ? 'NEW PERSONAL BEST!' : 'GAME OVER';
+  document.getElementById('overText').textContent =
+    `Score ${finalScore.toLocaleString()} · Level ${finalLevel} (${L.name}). The Toad never made it to lunch.`;
+  const form = document.getElementById('initialsForm');
+  form.hidden = true;
+  form.dataset.score = finalScore;
+  form.dataset.level = finalLevel;
+  const boardEl = document.getElementById('boardOver');
+  boardEl.innerHTML = '<li class="board-empty">Loading…</li>';
+  document.getElementById('overScreen').hidden = false;
+  try {
+    lastBoard = await loadBoard();
+    renderBoard(boardEl, lastBoard);
+    if (qualifies(lastBoard, finalScore)) {
+      form.hidden = false;
+      const input = document.getElementById('initials');
+      input.value = '';
+      try { input.value = localStorage.getItem('lt_toadroad_initials') || ''; } catch (e) {}
+      input.focus();
+    }
+  } catch (e) {
+    boardError(boardEl);
+  }
+}
+
+document.getElementById('initialsForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const input = document.getElementById('initials');
+  const name = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+  if (!name) { input.focus(); return; }
+  if (NOT_ALLOWED.includes(name)) { input.value = ''; input.placeholder = 'NOPE'; input.focus(); return; }
+  try { localStorage.setItem('lt_toadroad_initials', name); } catch (err) {}
+  const entry = { name, score: parseInt(form.dataset.score, 10), level: parseInt(form.dataset.level, 10), date: new Date().toISOString().slice(0, 10) };
+  const btn = document.getElementById('saveScore');
+  btn.disabled = true;
+  btn.textContent = '...';
+  const boardEl = document.getElementById('boardOver');
+  try {
+    const board = await saveToBoard(entry);
+    form.hidden = true;
+    renderBoard(boardEl, board, board.find(x => x.name === entry.name && x.score === entry.score && x.date === entry.date));
+    refreshStartBoard();
+  } catch (err) {
+    boardError(boardEl);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'SAVE';
+  }
+});
+document.getElementById('initials').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+});
 
 // ---- drawing ----
 function rr(x, y, w, h, r) {
@@ -798,9 +995,9 @@ function loop(now) {
 }
 
 try { best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) { best = 0; }
-if (best) document.getElementById('bestStart').textContent = 'Best score on this device: ' + best;
+refreshStartBoard();
 state = 'start';
-lives = 3; score = 0; level = 1;
+lives = START_LIVES; score = 0; level = 1;
 filled = GOAL_COLS.map(() => false);
 buildLevel();
 resetToad();
