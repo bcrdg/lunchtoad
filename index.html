@@ -707,6 +707,94 @@ body.revealed .result-card {
 .map-links.hidden { display: none; }
 .map-alt[hidden] { display: none; }
 
+/* Indecisive roller: recipe replaces the toad, card and buttons */
+.recipe-view[hidden] { display: none; }
+body.indecisive .toad-stage,
+body.indecisive .result-card,
+body.indecisive .lunch-btn,
+body.indecisive #optionsToggle,
+body.indecisive .options-panel,
+body.indecisive .warning-msg { display: none; }
+.recipe-view { animation: filtersIn 0.4s ease; }
+.recipe-photo-wrap {
+  width: min(420px, 100%);
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow: hidden;
+  background: var(--bg-deep);
+  transform: rotate(1deg);
+}
+.recipe-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.recipe-credit {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.6;
+  margin: 8px auto 14px;
+  max-width: 420px;
+}
+.recipe-credit a { color: inherit; }
+.recipe-card {
+  background: var(--cream);
+  color: var(--ink);
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 18px 22px 20px;
+  text-align: left;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.recipe-card .cuisine-tag { text-align: center; }
+.recipe-verdict {
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+.recipe-name {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 5.5vw, 1.9rem);
+  line-height: 1.1;
+  text-align: center;
+}
+.recipe-region { text-align: center; font-weight: 600; color: var(--toad-dark); margin-top: 4px; }
+.recipe-why { text-align: center; font-weight: 500; font-style: italic; margin: 10px 0; line-height: 1.4; }
+.recipe-meta {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.recipe-meta span {
+  background: rgba(255, 210, 63, 0.5);
+  border: 2px solid var(--ink);
+  border-radius: 50px;
+  padding: 2px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.recipe-card h3 {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--hot-pink);
+  margin: 14px 0 6px;
+  font-size: 1.05rem;
+}
+.recipe-ingredients, .recipe-steps {
+  padding-left: 22px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.recipe-ingredients li + li, .recipe-steps li + li { margin-top: 4px; }
+.back-to-road { margin-top: 22px; }
+
 /* KOKS easter egg: buttons vanish; the fate page also hides the result's extras */
 body.koksed .lunch-btn,
 body.koksed .options-toggle,
@@ -885,6 +973,29 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
     <div class="sparkles" id="sparkles"></div>
   </div>
 
+  <!-- Indecisive roller: too many spins -> a recipe from somewhere new replaces the toad -->
+  <section class="recipe-view" id="recipeView" hidden>
+    <div class="recipe-photo-wrap">
+      <img class="recipe-photo" id="recipePhoto" alt="">
+    </div>
+    <p class="recipe-credit" id="recipeCredit"></p>
+    <div class="recipe-card">
+      <div class="cuisine-tag">🫵 INDECISIVE! 🫵</div>
+      <p class="recipe-verdict">
+        You spun too many times. Your punishment (and your reward): cook something new from somewhere new.
+      </p>
+      <h2 class="recipe-name" id="recipeName"></h2>
+      <div class="recipe-region" id="recipeRegion"></div>
+      <p class="recipe-why" id="recipeWhy"></p>
+      <div class="recipe-meta" id="recipeMeta"></div>
+      <h3>Ingredients</h3>
+      <ul class="recipe-ingredients" id="recipeIngredients"></ul>
+      <h3>Steps</h3>
+      <ol class="recipe-steps" id="recipeSteps"></ol>
+    </div>
+    <button class="options-toggle back-to-road" id="backToRoad">🐸 BACK TO TOAD ROAD</button>
+  </section>
+
   <div class="result-card" id="resultCard">
     <div class="cuisine-tag" id="cuisineTag">READY</div>
     <div class="restaurant-name" id="restaurantName">Click below to begin...</div>
@@ -991,6 +1102,7 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
 </div>
 
 <script src="restaurants.js"></script>
+<script src="recipes.js"></script>
 <script>
 
 const cuisineMeta = {
@@ -1414,10 +1526,45 @@ function clearCuisineClasses() {
   });
 }
 
+// ---- Spin counter + "consulting" messages ----
+// More than INDECISIVE_LIMIT spins in one visit (tab) = indecisive -> recipe instead.
+const INDECISIVE_LIMIT = 6;
+const SPINS_KEY = 'lt_spins';
+function getSpins() {
+  try { return parseInt(sessionStorage.getItem(SPINS_KEY) || '0', 10) || 0; } catch (e) { return 0; }
+}
+function setSpins(n) {
+  try { sessionStorage.setItem(SPINS_KEY, String(n)); } catch (e) {}
+}
+
+const CONSULTING = [
+  'CONSULTING...', 'CROAKING...', 'ASKING THE POND...', 'READING THE FLIES...',
+  'SNIFFING THE AIR...', 'HMMMMM...', 'CONSULTING THE LILY PAD...', 'TASTING THE WIND...',
+  'RIBBIT RIBBIT...', 'GAZING INTO THE SWAMP...', 'COUNTING TADPOLES...', 'LICKING AN EYEBALL...',
+];
+// Later spins get warnings before the toad snaps.
+const IMPATIENT = {
+  4: 'AGAIN?!',
+  5: 'THE TOAD GROWS IMPATIENT...',
+  6: 'LAST CHANCE, INDECISIVE ONE...',
+};
+let lastConsulting = -1;
+function consultingText(spin) {
+  if (spin > INDECISIVE_LIMIT) return 'ENOUGH.';
+  if (IMPATIENT[spin]) return IMPATIENT[spin];
+  let i;
+  do { i = randomInt(CONSULTING.length); } while (i === lastConsulting);
+  lastConsulting = i;
+  return CONSULTING[i];
+}
+
 function startSearch() {
   const koks = activeTowns.size === 0;
   const active = koks ? restaurants : getActiveRestaurants();
   if (active.length === 0) return;
+  const spin = getSpins() + 1;
+  setSpins(spin);
+  const indecisive = !koks && spin > INDECISIVE_LIMIT;
 
   clearCuisineClasses();
   document.body.classList.remove('revealed', 'eating');
@@ -1426,7 +1573,7 @@ function startSearch() {
 
   holdTagline = false;
   lunchBtn.disabled = true;
-  lunchBtn.textContent = 'CONSULTING...';
+  lunchBtn.textContent = consultingText(spin);
   cuisineTag.textContent = '...';
   townDisplay.textContent = '';
   recBox.classList.add('hidden');
@@ -1438,8 +1585,81 @@ function startSearch() {
   }, 70);
 
   const duration = 2400 + Math.random() * 800;
-  setTimeout(koks ? revealKoks : reveal, duration);
+  setTimeout(koks ? revealKoks : indecisive ? revealRecipe : reveal, duration);
 }
+
+// ---- Indecisive roller: recipe instead of a restaurant ----
+const RECIPES_SEEN_KEY = 'lt_recipes_seen';
+function drawRecipe() {
+  let seen = [];
+  try { seen = JSON.parse(storageGet(RECIPES_SEEN_KEY) || '[]'); } catch (e) {}
+  let fresh = RECIPES.filter(r => !seen.includes(r.id));
+  if (fresh.length === 0) { seen = []; fresh = RECIPES; }
+  const r = fresh[randomInt(fresh.length)];
+  seen.push(r.id);
+  storageSet(RECIPES_SEEN_KEY, JSON.stringify(seen));
+  return r;
+}
+
+function fillList(el, items) {
+  el.innerHTML = '';
+  items.forEach(text => {
+    const li = document.createElement('li');
+    li.textContent = text;
+    el.appendChild(li);
+  });
+}
+
+function revealRecipe() {
+  clearInterval(cycleInterval);
+  document.body.classList.remove('searching');
+  const r = drawRecipe();
+
+  const photo = document.getElementById('recipePhoto');
+  photo.src = r.photo.src;
+  photo.alt = r.name;
+  const credit = document.getElementById('recipeCredit');
+  credit.textContent = 'Photo: ' + r.photo.author + ' · ' + r.photo.license + ' · ';
+  const link = document.createElement('a');
+  link.href = r.photo.source;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = 'Wikimedia Commons';
+  credit.appendChild(link);
+
+  document.getElementById('recipeName').textContent = r.name;
+  document.getElementById('recipeRegion').textContent = '🌍 ' + r.region;
+  document.getElementById('recipeWhy').textContent = r.why;
+  const meta = document.getElementById('recipeMeta');
+  meta.innerHTML = '';
+  [['⏱ ', r.time], ['🍽 Serves ', r.serves]].forEach(([label, v]) => {
+    const s = document.createElement('span');
+    s.textContent = label + v;
+    meta.appendChild(s);
+  });
+  fillList(document.getElementById('recipeIngredients'), r.ingredients);
+  fillList(document.getElementById('recipeSteps'), r.steps);
+
+  holdTagline = true;
+  taglineEl.textContent = "You've been declared INDECISIVE.";
+  document.getElementById('recipeView').hidden = false;
+  document.body.classList.add('indecisive');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('backToRoad').addEventListener('click', () => {
+  setSpins(0);
+  document.body.classList.remove('indecisive');
+  document.getElementById('recipeView').hidden = true;
+  holdTagline = false;
+  taglineEl.textContent = taglines[0];
+  nameDisplay.textContent = 'Click below to begin...';
+  cuisineTag.textContent = 'READY';
+  lunchBtn.disabled = false;
+  lunchBtn.textContent = 'FIND MY LUNCH';
+  updateCount();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
 
 function reveal() {
   clearInterval(cycleInterval);
