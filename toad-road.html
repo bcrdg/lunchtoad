@@ -169,17 +169,18 @@ canvas { display: block; }
 }
 .board-title { font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 1.5px; color: var(--yellow); font-size: 0.9rem; }
 .board { list-style: none; font-size: 0.85rem; font-weight: 600; margin-top: 4px; text-align: left; }
-.board li { display: grid; grid-template-columns: 1.6em 3.2em 1fr auto; gap: 6px; padding: 1px 0; }
+.board li { display: grid; grid-template-columns: 1.6em minmax(6.5em, 1fr) auto auto; gap: 8px; padding: 1px 0; }
+.board li span:nth-child(3) { text-align: right; }
 .board li .lvl { opacity: 0.6; font-weight: 500; }
 .board li.me { color: var(--yellow); }
 .board li.board-empty { display: block; text-align: center; opacity: 0.7; font-weight: 500; }
 .initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
 .initials-row { display: flex; gap: 8px; }
 .initials input {
-  width: 4.2em;
+  width: min(11.5em, 58vw);
   font-family: 'Bagel Fat One', cursive;
-  font-size: 1.4rem;
-  letter-spacing: 3px;
+  font-size: 1.2rem;
+  letter-spacing: 1px;
   text-align: center;
   text-transform: uppercase;
   border: 3px solid var(--ink);
@@ -227,9 +228,9 @@ canvas { display: block; }
       <h2 id="overTitle">GAME OVER</h2>
       <p id="overText"></p>
       <form class="initials" id="initialsForm" hidden>
-        <label for="initials">You made the board! Your initials:</label>
+        <label for="initials">You made the board! Your name:</label>
         <div class="initials-row">
-          <input id="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AAA">
+          <input id="initials" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="TOADMASTER">
           <button class="btn small" type="submit" id="saveScore">SAVE</button>
         </div>
       </form>
@@ -675,13 +676,28 @@ function boardToken() { return atob(TILE_NOISE + RIPPLE_SEED + SPARKLE_MAP + BOA
 const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 const BOARD_SIZE = 10;
 const LOCAL_BOARD_KEY = 'lt_toadroad_board';
-const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ'];
+const NAME_MAX = 10; // high-score names: 1-10 letters/numbers
+// Names are blocked if they ARE one of these (short words that show up inside
+// normal names, e.g. "ASS" in "GRASS", so they're only blocked on their own)...
+const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'TITS', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ', 'HOE', 'HO', 'ANUS', 'ARSE', 'RAPE', 'SPIC'];
+// ...or if they CONTAIN one of these anywhere.
+const NOT_ALLOWED_INSIDE = ['FUCK', 'FUK', 'FCK', 'PHUK', 'SHIT', 'SH1T', 'CUNT', 'NIGG', 'N1GG', 'NIGA', 'FAGG', 'FAG0',
+  'DICK', 'D1CK', 'COCK', 'C0CK', 'PUSSY', 'BITCH', 'B1TCH', 'NAZI', 'HITLER', 'KKK', 'PENIS', 'VAGINA', 'SLUT', 'WHORE',
+  'RAPIST', 'BOOB', 'TWAT', 'WANK', 'JIZZ', 'CUMS', 'CUMM', 'ASSHOLE', 'DUMBASS', 'JACKASS', 'BADASS', 'SEXY', 'SEXX',
+  'PORN', 'RETARD', 'TRANNY', 'DYKE', 'KIKE', 'CHINK', 'WETBACK', 'MOLEST', 'PEDO', 'KILLYOU'];
+function nameBlocked(name) {
+  const n = name.toUpperCase();
+  // Also catch number swaps like 5H1T or B00B
+  const plain = n.replace(/0/g, 'O').replace(/1/g, 'I').replace(/3/g, 'E').replace(/4/g, 'A').replace(/5/g, 'S').replace(/7/g, 'T');
+  return [n, plain].some(v => NOT_ALLOWED.includes(v) || NOT_ALLOWED_INSIDE.some(w => v.includes(w)));
+}
+function cleanName(value) { return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, NAME_MAX); }
 
 function onlineBoard() { return !!JSONBIN_BIN_ID; }
 
 function cleanBoard(list) {
   return (Array.isArray(list) ? list : [])
-    .filter(e => e && /^[A-Z0-9]{1,3}$/.test(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
+    .filter(e => e && typeof e.name === 'string' && /^[A-Z0-9]{1,10}$/.test(e.name) && !nameBlocked(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
     .map(e => ({ name: e.name, score: e.score, level: Math.max(1, Math.min(999, parseInt(e.level, 10) || 1)), date: String(e.date || '').slice(0, 10) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, BOARD_SIZE);
@@ -777,7 +793,7 @@ async function gameOver() {
       form.hidden = false;
       const input = document.getElementById('initials');
       input.value = '';
-      try { input.value = localStorage.getItem('lt_toadroad_initials') || ''; } catch (e) {}
+      try { input.value = cleanName(localStorage.getItem('lt_toadroad_initials')); } catch (e) {}
       input.focus();
     }
   } catch (e) {
@@ -789,9 +805,9 @@ document.getElementById('initialsForm').addEventListener('submit', async e => {
   e.preventDefault();
   const form = e.currentTarget;
   const input = document.getElementById('initials');
-  const name = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+  const name = cleanName(input.value);
   if (!name) { input.focus(); return; }
-  if (NOT_ALLOWED.includes(name)) { input.value = ''; input.placeholder = 'NOPE'; input.focus(); return; }
+  if (nameBlocked(name)) { input.value = ''; input.placeholder = 'NOPE'; input.focus(); return; }
   try { localStorage.setItem('lt_toadroad_initials', name); } catch (err) {}
   const entry = { name, score: parseInt(form.dataset.score, 10), level: parseInt(form.dataset.level, 10), date: new Date().toISOString().slice(0, 10) };
   const btn = document.getElementById('saveScore');
@@ -811,7 +827,7 @@ document.getElementById('initialsForm').addEventListener('submit', async e => {
   }
 });
 document.getElementById('initials').addEventListener('input', e => {
-  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+  e.target.value = cleanName(e.target.value);
 });
 
 // ---- drawing ----
