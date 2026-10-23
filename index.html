@@ -2330,6 +2330,31 @@ function burstSparkles() {
   setTimeout(() => sparklesEl.innerHTML = '', 2200);
 }
 
+// ---- Visit counter ----
+// Cookie "lt_visits" counts visits for a year. A visit is counted once per
+// browser session (tab), so refreshing the page doesn't add to it.
+// Loyal visitors can unlock features: add them to UNLOCKS as
+//   { at: 10, unlock() { ...show the feature... } }
+// and each one runs on every visit once the count reaches `at`.
+const VISITS_COOKIE = 'lt_visits';
+const VISIT_COUNTED_KEY = 'lt_visit_counted';
+function countVisit() {
+  let n = parseInt(getCookie(VISITS_COOKIE) || '0', 10) || 0;
+  let counted = false;
+  try { counted = sessionStorage.getItem(VISIT_COUNTED_KEY) === '1'; } catch (e) {}
+  if (!counted) {
+    n += 1;
+    try { sessionStorage.setItem(VISIT_COUNTED_KEY, '1'); } catch (e) {}
+  }
+  setCookie(VISITS_COOKIE, String(n), 365); // re-saved each visit so it lasts a year from the latest visit
+  return n;
+}
+const visitCount = countVisit();
+const UNLOCKS = [];
+function applyUnlocks() {
+  UNLOCKS.forEach(u => { if (visitCount >= u.at) { try { u.unlock(); } catch (e) {} } });
+}
+
 function init() {
   if (applyKoksStage()) return;
   loadState();
@@ -2344,6 +2369,7 @@ function init() {
   document.getElementById('chainCheck').checked = includeChains;
   document.getElementById('soundCheck').checked = soundOn;
   updateCount();
+  applyUnlocks();
 
   // Links like sonoralunchtoad.com/#contact (used by disclaimer.html) open the contact form.
   if (location.hash === '#contact') {
