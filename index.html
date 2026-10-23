@@ -3200,34 +3200,63 @@ init();
   const fly = document.getElementById('buzzFly');
   const stageEl = document.getElementById('toadStage');
   if (!fly || !stageEl) return;
-  let raf = 0, timer = 0;
+  // Timing:
+  //  - the first fly zips across quickly right after the page loads;
+  //  - after that, a fly comes back whenever the page has been idle (no tap,
+  //    click, key or scroll) for IDLE_MS;
+  //  - pressing the spin button shoos it away immediately.
+  const IDLE_MS = 10000;
+  const FIRST_FLIGHT_MS = [2600, 3200];   // quick first pass
+  const IDLE_FLIGHT_MS = [4200, 5400];    // later passes
+  let raf = 0, timer = 0, flying = false, flights = 0;
+  let lastActive = performance.now();
   const busy = () => ['searching', 'eating', 'indecisive', 'koksed', 'fate'].some(c => document.body.classList.contains(c)) ||
     document.hidden || document.querySelector('.modal-overlay:not(.hidden), .unlock-toast');
-  let flownOnce = false;
-  // The first fly takes off right after the page loads; then one every 22-42s.
-  function schedule(first) {
+
+  // Fire a fly once the page has been idle for IDLE_MS (counting from the last activity).
+  function scheduleIdle() {
     clearTimeout(timer);
-    timer = setTimeout(launch, first ? 400 : 22000 + Math.random() * 20000);
+    const wait = Math.max(300, lastActive + IDLE_MS - performance.now());
+    timer = setTimeout(() => {
+      if (performance.now() - lastActive < IDLE_MS - 50) { scheduleIdle(); return; } // activity happened meanwhile
+      launch();
+    }, wait);
+  }
+  function land() {
+    cancelAnimationFrame(raf);
+    flying = false;
+    fly.classList.remove('flying');
   }
   function launch() {
+    if (flying) return;
     if (busy()) {
-      // Something's on screen (fireworks, a pop-up...): try the first fly again soon
+      // Something's happening (spinning, fireworks, a pop-up...): wait for the next idle stretch.
+      // The very first fly retries sooner so it still shows up near page load.
       clearTimeout(timer);
-      timer = setTimeout(launch, flownOnce ? 22000 + Math.random() * 20000 : 2500);
+      if (flights === 0) timer = setTimeout(launch, 2500);
+      else { lastActive = performance.now(); scheduleIdle(); }
       return;
     }
-    flownOnce = true;
+    flights += 1;
+    flying = true;
     const w = stageEl.clientWidth, hgt = stageEl.clientHeight;
     const fromLeft = Math.random() < 0.5;
     const y0 = hgt * (0.1 + Math.random() * 0.5), y1 = hgt * (0.1 + Math.random() * 0.5);
-    const dur = 5200 + Math.random() * 2000, wiggle = 18 + Math.random() * 18, loops = 3 + Math.random() * 3;
+    const range = flights === 1 ? FIRST_FLIGHT_MS : IDLE_FLIGHT_MS;
+    const dur = range[0] + Math.random() * (range[1] - range[0]);
+    const wiggle = 18 + Math.random() * 18, loops = (dur / 1000) * (0.6 + Math.random() * 0.5);
     const start = performance.now();
     fly.classList.remove('caught');
     fly.classList.add('flying');
     fly.style.transform = '';
     function step(now) {
       const t = (now - start) / dur;
-      if (t >= 1 || busy()) { fly.classList.remove('flying'); schedule(); return; }
+      if (t >= 1 || busy()) {
+        land();
+        lastActive = performance.now(); // the next fly waits a full idle stretch after this one leaves
+        scheduleIdle();
+        return;
+      }
       const x = fromLeft ? -40 + (w + 80) * t : w + 40 - (w + 80) * t;
       const y = y0 + (y1 - y0) * t + Math.sin(t * Math.PI * 2 * loops) * wiggle;
       fly.style.left = x + 'px';
@@ -3242,6 +3271,23 @@ init();
     }
     raf = requestAnimationFrame(step);
   }
+
+  // Any activity restarts the idle countdown (taps on the fly itself don't count).
+  const activity = e => {
+    if (e && e.target === fly) return;
+    lastActive = performance.now();
+    if (!flying && flights > 0) scheduleIdle();
+  };
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, activity, { capture: true, passive: true }));
+  window.addEventListener('scroll', activity, { passive: true });
+
+  // Spinning shoos the fly away right away.
+  document.getElementById('lunchBtn').addEventListener('click', () => {
+    if (flying) land();
+    lastActive = performance.now();
+    scheduleIdle();
+  });
+
   fly.addEventListener('click', e => {
     e.stopPropagation();
     cancelAnimationFrame(raf);
@@ -3256,7 +3302,7 @@ init();
     setTimeout(() => { location.href = 'tongue-time.html'; }, 700);
   });
   window.lunchToadSendFly = launch; // used by the debug panel
-  schedule(true);
+  timer = setTimeout(launch, 400);   // first fly, right after the page loads
 })();
 
 // ---- Debug panel ----
