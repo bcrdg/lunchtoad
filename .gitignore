@@ -3,3 +3,4 @@ handoff.md
 .dev.vars
 .wrangler/
 node_modules/
+*.xlsx
