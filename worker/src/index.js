@@ -1,30 +1,34 @@
 // Lunch Toad API: a Cloudflare Worker backed by Workers KV.
 //
-// Holds the shared Toad Road high-score board so the website itself has no
-// secrets in it.
+// Holds the shared high-score boards so the website itself has no secrets in it.
+// Each board has the same three calls:
 //
-//   GET  /scores   -> { scores: [...] }            anyone (allowed sites only, via CORS)
-//   POST /scores   -> add one score                 anyone; the Worker checks it
-//        body: { name, score, level }
-//   PUT  /scores   -> replace the whole board       needs header X-Edit-Key = secret EDIT_KEY
+//   GET  /<board>   -> { scores: [...] }            anyone (allowed sites only, via CORS)
+//   POST /<board>   -> add one score                 anyone; the Worker checks it
+//        body: { name, score, level? }
+//   PUT  /<board>   -> replace the whole board       needs header X-Edit-Key = secret EDIT_KEY
 //        body: { scores: [...] }
 //
-// KV binding: LUNCH_KV. Board stored under the key "scores".
-// Secret: EDIT_KEY (set with `wrangler secret put EDIT_KEY`, never in a file).
+// Boards (see BOARDS):  /scores         Toad Road      (KV key "scores")
+//                       /tongue-scores  Tongue Time    (KV key "tongue-scores")
+//
+// KV binding: LUNCH_KV. Secret: EDIT_KEY (set with `wrangler secret put EDIT_KEY`, never in a file).
 
 const ALLOWED_ORIGINS = [
   'https://sonoralunchtoad.com',
   'https://www.sonoralunchtoad.com',
   'https://bcrdg.github.io',
 ];
-const BOARD_KEY = 'scores';
+const BOARDS = {
+  '/scores':        { key: 'scores',        maxScore: 1e7, hasLevel: true },   // Toad Road
+  '/tongue-scores': { key: 'tongue-scores', maxScore: 2e5, hasLevel: false },  // Tongue Time (45s rounds)
+};
 const BOARD_SIZE = 10;
 const MAX_PUT_BYTES = 200 * 1024;
 const MAX_POST_BYTES = 1024;
-const MAX_SCORE = 1e7;
-const SAVES_PER_MINUTE = 5; // per IP address
+const SAVES_PER_MINUTE = 5; // per IP address, across all boards
 
-// Same name rules as toad-road.html (kept in sync by hand).
+// Same name rules as names.js on the website (kept in sync by hand).
 const NAME_MAX = 10;
 const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'TITS', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ', 'HOE', 'HO', 'ANUS', 'ARSE', 'RAPE', 'SPIC'];
 const NOT_ALLOWED_INSIDE = ['FUCK', 'FUK', 'FCK', 'PHUK', 'SHIT', 'SH1T', 'CUNT', 'NIGG', 'N1GG', 'NIGA', 'FAGG', 'FAG0',
@@ -38,19 +42,21 @@ function nameBlocked(name) {
   return [n, plain].some(v => NOT_ALLOWED.includes(v) || NOT_ALLOWED_INSIDE.some(w => v.includes(w)));
 }
 
-function cleanEntry(e) {
+function cleanEntry(e, board) {
   if (!e || typeof e.name !== 'string') return null;
   const name = e.name.toUpperCase();
   if (!/^[A-Z0-9]{1,10}$/.test(name) || name.length > NAME_MAX || nameBlocked(name)) return null;
-  if (!Number.isInteger(e.score) || e.score < 0 || e.score >= MAX_SCORE) return null;
-  const level = Math.max(1, Math.min(999, parseInt(e.level, 10) || 1));
+  if (!Number.isInteger(e.score) || e.score < 0 || e.score >= board.maxScore) return null;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(e.date || '')) ? e.date : todayPacific();
-  return { name, score: e.score, level, date };
+  const entry = { name, score: e.score };
+  if (board.hasLevel) entry.level = Math.max(1, Math.min(999, parseInt(e.level, 10) || 1));
+  entry.date = date;
+  return entry;
 }
 
-function cleanBoard(list) {
+function cleanBoard(list, board) {
   return (Array.isArray(list) ? list : [])
-    .map(cleanEntry)
+    .map(e => cleanEntry(e, board))
     .filter(Boolean)
     .sort((a, b) => b.score - a.score)
     .slice(0, BOARD_SIZE);
@@ -78,7 +84,7 @@ function json(data, status, origin, extra) {
   });
 }
 
-// Reads the body as text, refusing anything over `limit` bytes.
+// Reads the body as JSON, refusing anything over `limit` bytes.
 async function readBody(request, limit) {
   const declared = parseInt(request.headers.get('Content-Length') || '0', 10);
   if (declared > limit) return { tooBig: true };
@@ -99,8 +105,8 @@ async function keyMatches(given, secret) {
   return diff === 0;
 }
 
-async function loadBoard(env) {
-  try { return cleanBoard((await env.LUNCH_KV.get(BOARD_KEY, 'json') || {}).scores); }
+async function loadBoard(env, board) {
+  try { return cleanBoard((await env.LUNCH_KV.get(board.key, 'json') || {}).scores, board); }
   catch (e) { return []; }
 }
 
@@ -130,42 +136,41 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '') {
-      return json({ ok: true, service: 'lunch-toad', endpoints: ['GET /scores', 'POST /scores', 'PUT /scores'] }, 200, origin);
+      return json({ ok: true, service: 'lunch-toad', boards: Object.keys(BOARDS) }, 200, origin);
     }
 
-    if (url.pathname === '/scores') {
-      if (request.method === 'GET') {
-        return json({ scores: await loadBoard(env) }, 200, origin);
-      }
+    const board = BOARDS[url.pathname];
+    if (!board) return json({ error: 'not found' }, 404, origin);
 
-      if (request.method === 'POST') {
-        const body = await readBody(request, MAX_POST_BYTES);
-        if (body.tooBig) return json({ error: 'too big' }, 413, origin);
-        if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
-        const entry = cleanEntry({ ...body.data, date: todayPacific() });
-        if (!entry) return json({ error: 'score not accepted' }, 422, origin);
-        if (await rateLimited(env, request)) return json({ error: 'slow down' }, 429, origin, { 'Retry-After': '60' });
-        const board = cleanBoard([...(await loadBoard(env)), entry]);
-        await env.LUNCH_KV.put(BOARD_KEY, JSON.stringify({ scores: board }));
-        return json({ scores: board, entry }, 200, origin);
-      }
-
-      if (request.method === 'PUT') {
-        if (!(await keyMatches(request.headers.get('X-Edit-Key'), env.EDIT_KEY))) {
-          return json({ error: 'forbidden' }, 403, origin);
-        }
-        const body = await readBody(request, MAX_PUT_BYTES);
-        if (body.tooBig) return json({ error: 'too big' }, 413, origin);
-        if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
-        if (!body.data || !Array.isArray(body.data.scores)) return json({ error: 'expected { "scores": [...] }' }, 400, origin);
-        const board = cleanBoard(body.data.scores);
-        await env.LUNCH_KV.put(BOARD_KEY, JSON.stringify({ scores: board }));
-        return json({ scores: board }, 200, origin);
-      }
-
-      return json({ error: 'method not allowed' }, 405, origin, { 'Allow': 'GET, POST, PUT, OPTIONS' });
+    if (request.method === 'GET') {
+      return json({ scores: await loadBoard(env, board) }, 200, origin);
     }
 
-    return json({ error: 'not found' }, 404, origin);
+    if (request.method === 'POST') {
+      const body = await readBody(request, MAX_POST_BYTES);
+      if (body.tooBig) return json({ error: 'too big' }, 413, origin);
+      if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
+      const entry = cleanEntry({ ...body.data, date: todayPacific() }, board);
+      if (!entry) return json({ error: 'score not accepted' }, 422, origin);
+      if (await rateLimited(env, request)) return json({ error: 'slow down' }, 429, origin, { 'Retry-After': '60' });
+      const scores = cleanBoard([...(await loadBoard(env, board)), entry], board);
+      await env.LUNCH_KV.put(board.key, JSON.stringify({ scores }));
+      return json({ scores, entry }, 200, origin);
+    }
+
+    if (request.method === 'PUT') {
+      if (!(await keyMatches(request.headers.get('X-Edit-Key'), env.EDIT_KEY))) {
+        return json({ error: 'forbidden' }, 403, origin);
+      }
+      const body = await readBody(request, MAX_PUT_BYTES);
+      if (body.tooBig) return json({ error: 'too big' }, 413, origin);
+      if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
+      if (!body.data || !Array.isArray(body.data.scores)) return json({ error: 'expected { "scores": [...] }' }, 400, origin);
+      const scores = cleanBoard(body.data.scores, board);
+      await env.LUNCH_KV.put(board.key, JSON.stringify({ scores }));
+      return json({ scores }, 200, origin);
+    }
+
+    return json({ error: 'method not allowed' }, 405, origin, { 'Allow': 'GET, POST, PUT, OPTIONS' });
   },
 };
