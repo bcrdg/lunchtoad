@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunch Toad — Sonora Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0F0F1A;
+  --bg: #1B1147;
+  --bg-deep: #0A0820;
+  --toad-green: #5A8C3F;
+  --toad-dark: #3E6B2D;
+  --toad-belly: #F5E6A8;
+  --hot-pink: #FF3E8F;
+  --yellow: #FFD23F;
+  --cream: #FFF8E7;
+  --c1: #FF2D2D; --c2: #5C0000;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  color: var(--cream);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.bg-stars {
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(1px 1px at 50% 60%, white, transparent),
+    radial-gradient(2px 2px at 80% 20%, white, transparent),
+    radial-gradient(1px 1px at 35% 80%, white, transparent),
+    radial-gradient(2px 2px at 65% 75%, white, transparent),
+    radial-gradient(1px 1px at 10% 50%, white, transparent),
+    radial-gradient(2px 2px at 90% 50%, white, transparent),
+    radial-gradient(1px 1px at 45% 15%, white, transparent),
+    radial-gradient(1.5px 1.5px at 5% 85%, white, transparent),
+    radial-gradient(1.5px 1.5px at 75% 90%, white, transparent);
+  background-size: 100% 100%;
+  opacity: 0.6;
+  z-index: 0;
+  animation: starsTwinkle 4s ease-in-out infinite;
+}
+@keyframes starsTwinkle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  width: 100%;
+  max-width: 540px;
+}
+
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(2.6rem, 8vw, 4rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 4px var(--ink);
+  letter-spacing: 4px;
+  line-height: 0.9;
+  text-shadow:
+    6px 6px 0 var(--ink),
+    6px 6px 0 var(--hot-pink),
+    12px 12px 0 var(--ink);
+  transform: rotate(-2deg);
+  margin-bottom: 8px;
+  animation: titleBob 3s ease-in-out infinite;
+}
+@keyframes titleBob {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(-2deg) translateY(-4px); }
+}
+
+.tagline {
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--cream);
+  opacity: 0.85;
+  margin-bottom: 18px;
+  min-height: 1.5em;
+  letter-spacing: 1px;
+  transition: opacity 0.3s;
+}
+
+.toad-stage {
+  position: relative;
+  width: min(380px, 88vw);
+  height: min(380px, 88vw);
+  margin: 0 auto 16px;
+}
+
+.toad-body-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  animation: toadIdle 3s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+@keyframes toadIdle {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-6px) scale(1.02, 0.98); }
+}
+
+body.searching .toad-body-wrap {
+  animation: toadShake 0.16s linear infinite;
+}
+@keyframes toadShake {
+  0% { transform: translate(-3px, 0) rotate(-1.5deg); }
+  25% { transform: translate(3px, -3px) rotate(1.5deg); }
+  50% { transform: translate(-3px, 0) rotate(-1.5deg); }
+  75% { transform: translate(3px, 3px) rotate(1.5deg); }
+  100% { transform: translate(-3px, 0) rotate(-1.5deg); }
+}
+
+body.eating .toad-body-wrap {
+  animation: toadEat 1.6s ease-in-out;
+}
+@keyframes toadEat {
+  0% { transform: translateY(0) scale(1, 1); }
+  20% { transform: translateY(-12px) scale(0.95, 1.05); }
+  45% { transform: translateY(0) scale(1.12, 0.9); }
+  60% { transform: translateY(0) scale(0.98, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+.toad { width: 100%; height: 100%; display: block; }
+
+.mouth-open { opacity: 0; }
+body.eating .mouth-line { animation: hideMouth 1.6s linear forwards; }
+body.eating .mouth-open { animation: showMouth 1.6s linear forwards; }
+@keyframes hideMouth {
+  0%, 38% { opacity: 1; }
+  42%, 78% { opacity: 0; }
+  82%, 100% { opacity: 1; }
+}
+@keyframes showMouth {
+  0%, 38% { opacity: 0; }
+  42%, 78% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+
+/* Hypnotic Eyes */
+.eye {
+  position: absolute;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 2;
+}
+.eye-left { top: 20.5%; left: 19%; }
+.eye-right { top: 20.5%; right: 19%; }
+
+.eye-base {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 45% 42%,
+    var(--c1) 0%,
+    var(--c1) 35%,
+    var(--c2) 100%
+  );
+  transition: background 0.4s ease;
+}
+
+.eye-rings {
+  position: absolute;
+  inset: -8%;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    rgba(0,0,0,0.65) 9%,  transparent 13%,
+    rgba(0,0,0,0.6)  22%, transparent 26%,
+    rgba(0,0,0,0.55) 38%, transparent 42%,
+    rgba(0,0,0,0.5)  54%, transparent 58%,
+    rgba(0,0,0,0.45) 72%, transparent 76%
+  );
+  animation: eyeRings 1.8s linear infinite;
+}
+@keyframes eyeRings {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+.eye-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20%;
+  height: 20%;
+  background: var(--ink);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  box-shadow: 0 0 8px rgba(0,0,0,0.6) inset;
+  transition: transform 0.3s;
+}
+
+body.searching .eye-rings { animation-duration: 0.45s; }
+body.searching .eye-core { transform: translate(-50%, -50%) scale(1.5); }
+body.eating .eye-rings { animation-duration: 0.85s; }
+body.eating .eye-core { transform: translate(-50%, -50%) scale(1.3); }
+
+/* Food orbit during search */
+.food-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+body.searching .food-orbit {
+  opacity: 1;
+  animation: orbitRotate 1.6s linear infinite;
+}
+@keyframes orbitRotate { to { transform: rotate(360deg); } }
+
+.orbit-item {
+  position: absolute;
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  filter: drop-shadow(0 0 8px rgba(255, 200, 50, 0.6));
+  --radius: clamp(140px, 42vw, 195px);
+  width: 1em;
+  height: 1em;
+  margin-left: -0.5em;
+  margin-top: -0.5em;
+}
+
+.food-final {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  font-size: clamp(3rem, 12vw, 5rem);
+  z-index: 3;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 20px var(--yellow));
+}
+body.eating .food-final { animation: foodEat 1.6s ease-in forwards; }
+@keyframes foodEat {
+  0%   { transform: translate(-50%, 80px) scale(0) rotate(-30deg); opacity: 0; }
+  20%  { transform: translate(-50%, 50px) scale(1.6) rotate(0deg); opacity: 1; }
+  60%  { transform: translate(-50%, 20px) scale(1.4) rotate(15deg); opacity: 1; }
+  85%  { transform: translate(-50%, -10px) scale(0.8) rotate(0deg); opacity: 0.9; }
+  100% { transform: translate(-50%, -40px) scale(0) rotate(0deg); opacity: 0; }
+}
+
+.sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.sparkle {
+  position: absolute;
+  font-size: 1.4rem;
+  animation: sparkleBurst 1.4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes sparkleBurst {
+  0%   { transform: translate(0, 0) scale(0); opacity: 0; }
+  20%  { transform: translate(var(--dx, 0), var(--dy, 0)) scale(1.3) rotate(180deg); opacity: 1; }
+  100% { transform: translate(calc(var(--dx, 0) * 2), calc(var(--dy, 0) * 2)) scale(0) rotate(360deg); opacity: 0; }
+}
+
+.aura {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  border: 6px solid var(--yellow);
+  transform: translate(-50%, -50%) scale(0.5);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+body.eating .aura { animation: auraPulse 1.6s ease-out forwards; }
+@keyframes auraPulse {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+
+/* Result Card */
+.result-card {
+  background: var(--cream);
+  color: var(--ink);
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  padding: 14px 24px;
+  margin: 0 auto 22px;
+  max-width: 430px;
+  box-shadow: 6px 6px 0 var(--ink);
+  position: relative;
+  transform: rotate(-1deg);
+}
+body.revealed .result-card {
+  animation: cardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes cardPop {
+  0%   { transform: rotate(-1deg) scale(0.85); }
+  60%  { transform: rotate(2deg) scale(1.08); }
+  100% { transform: rotate(-1deg) scale(1); }
+}
+
+.cuisine-tag {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.95rem;
+  letter-spacing: 2px;
+  color: var(--hot-pink);
+  margin-bottom: 4px;
+}
+.restaurant-name {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(1.4rem, 5.5vw, 2.1rem);
+  color: var(--ink);
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+
+.lunch-btn {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  color: var(--cream);
+  -webkit-text-stroke: 1.5px var(--ink);
+  background: var(--hot-pink);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 14px 36px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+  animation: btnPulse 1.6s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+@keyframes btnPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.lunch-btn:hover:not(:disabled) {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.lunch-btn:active:not(:disabled) {
+  transform: translate(4px, 4px) scale(1);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.lunch-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  animation: none;
+}
+
+.footer-note {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* PICKY FILTER + MENU CONTROLS */
+.controls-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.picky-toggle, .menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 50px;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--ink);
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.9rem;
+  letter-spacing: 1.5px;
+  user-select: none;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+}
+.picky-toggle:hover, .menu-btn:hover { background: var(--yellow); }
+.picky-toggle:active, .menu-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.picky-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--hot-pink);
+  cursor: pointer;
+}
+
+.cuisine-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 14px auto 0;
+  max-width: 500px;
+  padding: 14px;
+  background: rgba(255, 248, 231, 0.08);
+  border: 2px dashed rgba(255, 248, 231, 0.3);
+  border-radius: 16px;
+  animation: filtersIn 0.3s ease;
+}
+@keyframes filtersIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cuisine-filters.hidden { display: none; }
+
+.cuisine-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 248, 231, 0.1);
+  border: 2px solid rgba(255, 248, 231, 0.4);
+  border-radius: 50px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--cream);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  letter-spacing: 0.5px;
+}
+.cuisine-pill:hover {
+  border-color: var(--yellow);
+  background: rgba(255, 210, 63, 0.15);
+}
+.cuisine-pill.active {
+  background: var(--yellow);
+  color: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.cuisine-pill input { display: none; }
+
+.warning-msg {
+  color: var(--hot-pink);
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  display: none;
+}
+.warning-msg.visible { display: block; animation: shake 0.4s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 32, 0.85);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: overlayIn 0.25s ease;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--cream);
+  color: var(--ink);
+  border: 5px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 8px 8px 0 var(--ink);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalIn {
+  from { transform: scale(0.85) rotate(-2deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--yellow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.6rem;
+  letter-spacing: 2px;
+  -webkit-text-stroke: 1px var(--ink);
+}
+.modal-close {
+  background: var(--hot-pink);
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  font-family: 'Bagel Fat One', cursive;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+
+.add-form {
+  padding: 14px 16px;
+  border-bottom: 2px dashed var(--ink);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: rgba(255, 210, 63, 0.15);
+}
+.add-form input,
+.add-form select {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+}
+.add-form input { flex: 1; min-width: 140px; }
+.add-form select { min-width: 130px; }
+.add-form button {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.95rem;
+  letter-spacing: 1.5px;
+  padding: 8px 16px;
+  background: var(--toad-green);
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.add-form button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+.restaurant-list {
+  overflow-y: auto;
+  padding: 8px 12px;
+  flex: 1;
+  background: white;
+}
+.restaurant-list::-webkit-scrollbar { width: 10px; }
+.restaurant-list::-webkit-scrollbar-track { background: rgba(15, 15, 26, 0.05); }
+.restaurant-list::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 5px; }
+
+.restaurant-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(15, 15, 26, 0.1);
+}
+.restaurant-row:last-child { border-bottom: none; }
+.restaurant-row .row-name {
+  flex: 1;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 6px 10px;
+  border: 2px solid rgba(15, 15, 26, 0.2);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  min-width: 100px;
+}
+.restaurant-row .row-name:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+.restaurant-row .row-cuisine {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 2px solid rgba(15, 15, 26, 0.2);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+.restaurant-row .row-delete {
+  background: var(--hot-pink);
+  color: var(--cream);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.restaurant-row .row-delete:active { transform: scale(0.95); }
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 3px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(15, 15, 26, 0.05);
+}
+.modal-footer button {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  padding: 8px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn-reset { background: white; color: var(--ink); }
+.btn-done {
+  background: var(--toad-green);
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+}
+.modal-footer button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+/* Cuisine eye color themes */
+body.cuisine-american  { --c1: #DC143C; --c2: #1E40AF; }
+body.cuisine-mexican   { --c1: #00964D; --c2: #C8102E; }
+body.cuisine-italian   { --c1: #008C45; --c2: #CD212A; }
+body.cuisine-asian     { --c1: #FFDE00; --c2: #DE2910; }
+body.cuisine-greek     { --c1: #0D5EAF; --c2: #002E7B; }
+body.cuisine-bbq       { --c1: #FF8C00; --c2: #4A2C20; }
+body.cuisine-breakfast { --c1: #FFD23F; --c2: #FF8C42; }
+body.cuisine-sandwich  { --c1: #E8C547; --c2: #6B3410; }
+body.cuisine-hotdog    { --c1: #FFD23F; --c2: #DC143C; }
+body.cuisine-coffee    { --c1: #B07242; --c2: #2A1810; }
+body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
+
+@media (max-width: 480px) {
+  h1 { letter-spacing: 2px; }
+  .tagline { font-size: 0.9rem; }
+  .add-form { flex-direction: column; }
+  .add-form input, .add-form select, .add-form button { width: 100%; }
+  .restaurant-row { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-stars"></div>
+
+<div class="container">
+  <h1>LUNCH TOAD</h1>
+  <p class="tagline">"<span id="tagline">I shall reveal thy meal...</span>"</p>
+
+  <div class="toad-stage" id="toadStage">
+    <div class="aura"></div>
+
+    <div class="toad-body-wrap">
+      <svg class="toad" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="200" cy="378" rx="160" ry="12" fill="rgba(0,0,0,0.5)"/>
+        <ellipse cx="78" cy="320" rx="42" ry="32" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="5"/>
+        <ellipse cx="322" cy="320" rx="42" ry="32" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="5"/>
+        <ellipse cx="55" cy="338" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+        <ellipse cx="78" cy="345" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+        <ellipse cx="101" cy="338" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+        <ellipse cx="345" cy="338" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+        <ellipse cx="322" cy="345" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+        <ellipse cx="299" cy="338" rx="11" ry="8" fill="#3E6B2D" stroke="#0F0F1A" stroke-width="4"/>
+
+        <ellipse cx="200" cy="240" rx="170" ry="130" fill="#5A8C3F" stroke="#0F0F1A" stroke-width="6"/>
+        <ellipse cx="200" cy="290" rx="120" ry="62" fill="#F5E6A8" stroke="#0F0F1A" stroke-width="3"/>
+        <path d="M 130 260 Q 200 280 270 260" stroke="#C9A227" stroke-width="2" fill="none" opacity="0.5"/>
+
+        <circle cx="80"  cy="200" r="7"  fill="#3E6B2D"/>
+        <circle cx="100" cy="240" r="9"  fill="#3E6B2D"/>
+        <circle cx="320" cy="200" r="8"  fill="#3E6B2D"/>
+        <circle cx="305" cy="245" r="10" fill="#3E6B2D"/>
+        <circle cx="200" cy="172" r="6"  fill="#3E6B2D"/>
+        <circle cx="55"  cy="232" r="5"  fill="#3E6B2D"/>
+        <circle cx="345" cy="225" r="6"  fill="#3E6B2D"/>
+
+        <ellipse cx="120" cy="135" rx="62" ry="56" fill="#5A8C3F" stroke="#0F0F1A" stroke-width="6"/>
+        <ellipse cx="280" cy="135" rx="62" ry="56" fill="#5A8C3F" stroke="#0F0F1A" stroke-width="6"/>
+
+        <circle cx="120" cy="125" r="44" fill="white" stroke="#0F0F1A" stroke-width="5"/>
+        <circle cx="280" cy="125" r="44" fill="white" stroke="#0F0F1A" stroke-width="5"/>
+
+        <ellipse cx="180" cy="248" rx="3" ry="6" fill="#0F0F1A"/>
+        <ellipse cx="220" cy="248" rx="3" ry="6" fill="#0F0F1A"/>
+
+        <path class="mouth-line" d="M 130 308 Q 200 294 270 308"
+              stroke="#0F0F1A" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+        <ellipse class="mouth-open" cx="200" cy="312" rx="58" ry="22"
+                 fill="#3D1A1A" stroke="#0F0F1A" stroke-width="5"/>
+        <ellipse class="mouth-open" cx="200" cy="305" rx="34" ry="9"
+                 fill="#FF6B7A"/>
+      </svg>
+
+      <div class="eye eye-left">
+        <div class="eye-base"></div>
+        <div class="eye-rings"></div>
+        <div class="eye-core"></div>
+      </div>
+      <div class="eye eye-right">
+        <div class="eye-base"></div>
+        <div class="eye-rings"></div>
+        <div class="eye-core"></div>
+      </div>
+    </div>
+
+    <div class="food-orbit" id="foodOrbit"></div>
+    <div class="food-final" id="finalFood"></div>
+    <div class="sparkles" id="sparkles"></div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="cuisine-tag" id="cuisineTag">READY</div>
+    <div class="restaurant-name" id="restaurantName">Click below to begin...</div>
+  </div>
+
+  <button class="lunch-btn" id="lunchBtn">FIND MY LUNCH</button>
+
+  <div class="footer-note">
+    Lunch Toad chooses from <span id="restCount">--</span> restaurants
+  </div>
+
+  <div class="warning-msg" id="warningMsg">⚠ NOTHING TO PICK FROM, PICKY ⚠</div>
+
+  <div class="controls-row">
+    <label class="picky-toggle">
+      <input type="checkbox" id="pickyCheck">
+      <span>🤨 I'M PICKY</span>
+    </label>
+    <button class="menu-btn" id="manageBtn">🍴 EDIT MENU</button>
+  </div>
+
+  <div class="cuisine-filters hidden" id="cuisineFilters"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>THE MENU</h2>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="add-form">
+      <input type="text" id="newName" placeholder="Restaurant name..." maxlength="60">
+      <select id="newCuisine"></select>
+      <button id="addBtn">+ ADD</button>
+    </div>
+    <div class="restaurant-list" id="restaurantListEl"></div>
+    <div class="modal-footer">
+      <button class="btn-reset" id="resetBtn">↺ RESET</button>
+      <button class="btn-done" id="doneBtn">DONE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_RESTAURANTS = [
+  { name: "The Armory", cuisine: "american" },
+  { name: "Diamondback Grill", cuisine: "american" },
+  { name: "Bigwood Brew Works", cuisine: "american" },
+  { name: "Gus's Steakhouse", cuisine: "american" },
+  { name: "The Peppery", cuisine: "american" },
+  { name: "The Standard Pour", cuisine: "american" },
+  { name: "Sonora Squeeze Burger", cuisine: "american" },
+  { name: "Applebee's", cuisine: "american" },
+  { name: "The Outpost", cuisine: "american" },
+  { name: "The Game Room", cuisine: "american" },
+  { name: "Mandy's Breakfast House", cuisine: "breakfast" },
+  { name: "Barrow's Cafe & Grill", cuisine: "breakfast" },
+  { name: "Papa's New Roost", cuisine: "breakfast" },
+  { name: "Willow Wisp Café", cuisine: "breakfast" },
+  { name: "Foothills Cafe", cuisine: "breakfast" },
+  { name: "My Garden Café", cuisine: "breakfast" },
+  { name: "El Arroyo Cantina", cuisine: "mexican" },
+  { name: "Escondite De La Torre", cuisine: "mexican" },
+  { name: "Taqueria Sonora", cuisine: "mexican" },
+  { name: "El Jardín", cuisine: "mexican" },
+  { name: "Cocina Michoacana", cuisine: "mexican" },
+  { name: "Taquería La Esmeralda", cuisine: "mexican" },
+  { name: "Taqueria Barraza", cuisine: "mexican" },
+  { name: "Taco Shop El Rey", cuisine: "mexican" },
+  { name: "Sergio's Taquería", cuisine: "mexican" },
+  { name: "Pinocchio's", cuisine: "italian" },
+  { name: "Emberz Wood-Fired Foodz", cuisine: "italian" },
+  { name: "Mike's Pizza of Sonora", cuisine: "italian" },
+  { name: "Waterwheel Saloon & Pizza", cuisine: "italian" },
+  { name: "Yoshoku", cuisine: "asian" },
+  { name: "Sonora Thai Cuisine", cuisine: "asian" },
+  { name: "B E Wok & Sushi", cuisine: "asian" },
+  { name: "Hong Kong Garden", cuisine: "asian" },
+  { name: "Mandarin House", cuisine: "asian" },
+  { name: "Great Wall Restaurant", cuisine: "asian" },
+  { name: "GK Mongolian BBQ", cuisine: "asian" },
+  { name: "Kobe Japanese Steakhouse", cuisine: "asian" },
+  { name: "Yianni's Grill", cuisine: "greek" },
+  { name: "Mean Lew's BBQ", cuisine: "bbq" },
+  { name: "Mountain Q", cuisine: "bbq" },
+  { name: "The High Country BBQ", cuisine: "bbq" },
+  { name: "Mijo's Oak BBQ", cuisine: "bbq" },
+  { name: "Two Acre Farms", cuisine: "sandwich" },
+  { name: "Pence Farm Sourdough", cuisine: "sandwich" },
+  { name: "West Coast Sourdough", cuisine: "sandwich" },
+  { name: "Bagel Bin", cuisine: "sandwich" },
+  { name: "Goodness Cafe", cuisine: "sandwich" },
+  { name: "Doc's Dawgs", cuisine: "hotdog" },
+  { name: "Nox Sonora", cuisine: "coffee" },
+  { name: "Revive Coffee", cuisine: "coffee" },
+  { name: "Black Bomb Entertainment", cuisine: "coffee" },
+  { name: "Local Collective", cuisine: "coffee" },
+  { name: "The Creamery", cuisine: "dessert" },
+  { name: "It's Yo Good", cuisine: "dessert" },
+  { name: "Simply Delish", cuisine: "dessert" },
+  { name: "The Candy Vault", cuisine: "dessert" },
+];
+
+const cuisineMeta = {
+  american:  { emoji: "🍔", label: "BURGER VIBES" },
+  mexican:   { emoji: "🌮", label: "VIVA MÉXICO" },
+  italian:   { emoji: "🍕", label: "MAMMA MIA" },
+  asian:     { emoji: "🍜", label: "SLURP TIME" },
+  greek:     { emoji: "🥙", label: "OPA!" },
+  bbq:       { emoji: "🍖", label: "SMOKE SHOW" },
+  breakfast: { emoji: "🥞", label: "RISE & DINE" },
+  sandwich:  { emoji: "🥪", label: "STACKED" },
+  hotdog:    { emoji: "🌭", label: "FRANK ATTACK" },
+  coffee:    { emoji: "☕", label: "BREW TIME" },
+  dessert:   { emoji: "🍦", label: "SWEET TOOTH" },
+};
+
+const taglines = [
+  "I shall reveal thy meal...",
+  "OBEY THE LUNCH TOAD",
+  "Your hunger is mine to command",
+  "ALL GLORY TO THE LUNCH TOAD",
+  "The Toad knows where you eat",
+  "Submit thy appetite",
+  "The Toad has decided",
+];
+
+let nextId = 1;
+let restaurants = [];
+let isPicky = false;
+let activeCuisines = new Set(Object.keys(cuisineMeta));
+
+function withIds(list) {
+  return list.map(r => ({ ...r, id: nextId++ }));
+}
+
+// Persistence via the browser's localStorage (per browser/device).
+// Fails silently in private windows or if storage is blocked.
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
+function loadState() {
+  const r = storageGet('lt_restaurants');
+  restaurants = withIds(DEFAULT_RESTAURANTS);
+  if (r) {
+    try {
+      const data = JSON.parse(r);
+      if (Array.isArray(data) && data.length > 0) {
+        nextId = 1;
+        restaurants = data.map(rt => ({
+          id: nextId++,
+          name: String(rt.name || ''),
+          cuisine: cuisineMeta[rt.cuisine] ? rt.cuisine : 'american'
+        }));
+      }
+    } catch (e) {}
+  }
+
+  const f = storageGet('lt_filters');
+  if (f) {
+    try {
+      const data = JSON.parse(f);
+      isPicky = !!data.isPicky;
+      if (Array.isArray(data.cuisines)) {
+        activeCuisines = new Set(data.cuisines);
+      }
+    } catch (e) {}
+  }
+}
+
+function saveRestaurants() {
+  storageSet('lt_restaurants', JSON.stringify(restaurants));
+}
+function saveFilters() {
+  storageSet('lt_filters', JSON.stringify({
+    isPicky,
+    cuisines: [...activeCuisines]
+  }));
+}
+
+function getActiveRestaurants() {
+  const named = restaurants.filter(r => r.name.trim());
+  if (!isPicky) return named;
+  return named.filter(r => activeCuisines.has(r.cuisine));
+}
+
+function updateCount() {
+  const active = getActiveRestaurants();
+  document.getElementById('restCount').textContent = active.length;
+  const warning = document.getElementById('warningMsg');
+  warning.classList.toggle('visible', active.length === 0);
+  document.getElementById('lunchBtn').disabled = active.length === 0;
+}
+
+function buildOrbit() {
+  const orbit = document.getElementById('foodOrbit');
+  orbit.innerHTML = '';
+  const cuisines = Object.keys(cuisineMeta);
+  cuisines.forEach((c, i) => {
+    const angle = (i / cuisines.length) * 360;
+    const item = document.createElement('div');
+    item.className = 'orbit-item';
+    item.textContent = cuisineMeta[c].emoji;
+    item.style.transform =
+      `rotate(${angle}deg) translate(0, calc(var(--radius) * -1)) rotate(${-angle}deg)`;
+    orbit.appendChild(item);
+  });
+}
+
+function buildCuisineFilters() {
+  const container = document.getElementById('cuisineFilters');
+  container.innerHTML = '';
+  Object.entries(cuisineMeta).forEach(([key, meta]) => {
+    const label = document.createElement('label');
+    label.className = 'cuisine-pill';
+    if (activeCuisines.has(key)) label.classList.add('active');
+    label.innerHTML =
+      `<input type="checkbox" data-cuisine="${key}" ${activeCuisines.has(key) ? 'checked' : ''}>` +
+      `<span>${meta.emoji} ${meta.label}</span>`;
+    const cb = label.querySelector('input');
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        activeCuisines.add(key);
+        label.classList.add('active');
+      } else {
+        activeCuisines.delete(key);
+        label.classList.remove('active');
+      }
+      saveFilters();
+      updateCount();
+    });
+    container.appendChild(label);
+  });
+}
+
+function cuisineOptionsHtml(selected) {
+  return Object.entries(cuisineMeta).map(([k, m]) =>
+    `<option value="${k}" ${selected === k ? 'selected' : ''}>${m.emoji} ${m.label}</option>`
+  ).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function renderRestaurantList() {
+  const list = document.getElementById('restaurantListEl');
+  list.innerHTML = '';
+  restaurants.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'restaurant-row';
+    row.dataset.id = r.id;
+    row.innerHTML =
+      `<input type="text" class="row-name" value="${escapeHtml(r.name)}" maxlength="60">` +
+      `<select class="row-cuisine">${cuisineOptionsHtml(r.cuisine)}</select>` +
+      `<button class="row-delete" title="Delete">🗑</button>`;
+    row.querySelector('.row-name').addEventListener('input', e => {
+      r.name = e.target.value;
+    });
+    row.querySelector('.row-cuisine').addEventListener('change', e => {
+      r.cuisine = e.target.value;
+    });
+    row.querySelector('.row-delete').addEventListener('click', () => {
+      restaurants = restaurants.filter(x => x.id !== r.id);
+      renderRestaurantList();
+    });
+    list.appendChild(row);
+  });
+}
+
+const modalOverlay = document.getElementById('modalOverlay');
+document.getElementById('manageBtn').addEventListener('click', () => {
+  document.getElementById('newCuisine').innerHTML = cuisineOptionsHtml('american');
+  document.getElementById('newName').value = '';
+  renderRestaurantList();
+  modalOverlay.classList.remove('hidden');
+});
+function closeModal() {
+  modalOverlay.classList.add('hidden');
+  saveRestaurants();
+  updateCount();
+}
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('doneBtn').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const nameInput = document.getElementById('newName');
+  const cuisineSelect = document.getElementById('newCuisine');
+  const name = nameInput.value.trim();
+  if (!name) {
+    nameInput.focus();
+    return;
+  }
+  restaurants.push({ id: nextId++, name, cuisine: cuisineSelect.value });
+  nameInput.value = '';
+  renderRestaurantList();
+  const list = document.getElementById('restaurantListEl');
+  list.scrollTop = list.scrollHeight;
+});
+
+document.getElementById('newName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addBtn').click();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('Reset to the original Sonora restaurant list? Your edits will be lost.')) return;
+  nextId = 1;
+  restaurants = withIds(DEFAULT_RESTAURANTS);
+  renderRestaurantList();
+});
+
+document.getElementById('pickyCheck').addEventListener('change', e => {
+  isPicky = e.target.checked;
+  document.getElementById('cuisineFilters').classList.toggle('hidden', !isPicky);
+  saveFilters();
+  updateCount();
+});
+
+let taglineIndex = 0;
+const taglineEl = document.getElementById('tagline');
+setInterval(() => {
+  if (document.body.classList.contains('searching') ||
+      document.body.classList.contains('eating')) return;
+  taglineIndex = (taglineIndex + 1) % taglines.length;
+  taglineEl.parentElement.style.opacity = '0';
+  setTimeout(() => {
+    taglineEl.textContent = taglines[taglineIndex];
+    taglineEl.parentElement.style.opacity = '1';
+  }, 300);
+}, 4500);
+
+const lunchBtn = document.getElementById('lunchBtn');
+const nameDisplay = document.getElementById('restaurantName');
+const cuisineTag = document.getElementById('cuisineTag');
+const finalFood = document.getElementById('finalFood');
+const sparklesEl = document.getElementById('sparkles');
+
+let cycleInterval = null;
+
+lunchBtn.addEventListener('click', () => {
+  if (lunchBtn.disabled) return;
+  startSearch();
+});
+
+function clearCuisineClasses() {
+  Object.keys(cuisineMeta).forEach(c => {
+    document.body.classList.remove('cuisine-' + c);
+  });
+}
+
+function startSearch() {
+  const active = getActiveRestaurants();
+  if (active.length === 0) return;
+
+  clearCuisineClasses();
+  document.body.classList.remove('revealed', 'eating');
+  void document.body.offsetWidth;
+  document.body.classList.add('searching');
+
+  lunchBtn.disabled = true;
+  lunchBtn.textContent = 'CONSULTING...';
+  cuisineTag.textContent = '...';
+
+  cycleInterval = setInterval(() => {
+    const r = active[Math.floor(Math.random() * active.length)];
+    nameDisplay.textContent = r.name;
+  }, 70);
+
+  const duration = 2400 + Math.random() * 800;
+  setTimeout(reveal, duration);
+}
+
+function reveal() {
+  clearInterval(cycleInterval);
+  document.body.classList.remove('searching');
+
+  const active = getActiveRestaurants();
+  const chosen = active[Math.floor(Math.random() * active.length)];
+  const meta = cuisineMeta[chosen.cuisine];
+
+  void document.body.offsetWidth;
+  document.body.classList.add('cuisine-' + chosen.cuisine);
+  document.body.classList.add('eating', 'revealed');
+
+  finalFood.textContent = meta.emoji;
+  nameDisplay.textContent = chosen.name;
+  cuisineTag.textContent = meta.label;
+
+  burstSparkles();
+
+  setTimeout(() => {
+    document.body.classList.remove('eating');
+    lunchBtn.disabled = false;
+    lunchBtn.textContent = 'AGAIN, TOAD';
+  }, 1700);
+}
+
+function burstSparkles() {
+  sparklesEl.innerHTML = '';
+  const count = 14;
+  const glyphs = ['✨', '⭐', '💫', '🌟'];
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const angle = (i / count) * 360 + Math.random() * 30;
+    const dist = 90 + Math.random() * 70;
+    const dx = Math.cos(angle * Math.PI / 180) * dist;
+    const dy = Math.sin(angle * Math.PI / 180) * dist;
+    s.style.left = '50%';
+    s.style.top = '50%';
+    s.style.setProperty('--dx', dx + 'px');
+    s.style.setProperty('--dy', dy + 'px');
+    s.style.animationDelay = (Math.random() * 0.3) + 's';
+    s.textContent = glyphs[i % glyphs.length];
+    sparklesEl.appendChild(s);
+  }
+  setTimeout(() => sparklesEl.innerHTML = '', 2200);
+}
+
+function init() {
+  loadState();
+  buildOrbit();
+  buildCuisineFilters();
+  document.getElementById('pickyCheck').checked = isPicky;
+  document.getElementById('cuisineFilters').classList.toggle('hidden', !isPicky);
+  updateCount();
+}
+init();
+</script>
+
+</body>
+</html>
