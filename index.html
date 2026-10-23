@@ -25,7 +25,7 @@
   --hot-pink: #FF3E8F;
   --yellow: #FFD23F;
   --cream: #FFF8E7;
-  --c1: #FF2D2D; --c2: #5C0000;
+  --c1: #FFD23F; --c2: #FF3E8F; /* default eye rings: yellow + hot pink */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -184,55 +184,61 @@ body.eating .mouth-open { animation: showMouth 1.6s linear forwards; }
 .eye-left { top: 20.5%; left: 19%; }
 .eye-right { top: 20.5%; right: 19%; }
 
+/* Hypnotoad-style eyes: crisp, bright concentric rings flowing outward like a
+   hypnosis tunnel (deliberately NOT soft red, so they don't read as bloodshot).
+   --ring slides the ring pattern outward; @property lets CSS animate it smoothly.
+   Browsers without @property just show still rings. */
+@property --ring {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
 .eye-base {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    circle at 45% 42%,
-    var(--c1) 0%,
-    var(--c1) 35%,
-    var(--c2) 100%
+  --ring: 0%; /* fallback start value so older browsers still draw the rings */
+  background: repeating-radial-gradient(
+    circle at center,
+    var(--c1) var(--ring),
+    var(--c1) calc(var(--ring) + 7%),
+    var(--ink) calc(var(--ring) + 7%),
+    var(--ink) calc(var(--ring) + 9%),
+    var(--c2) calc(var(--ring) + 9%),
+    var(--c2) calc(var(--ring) + 16%),
+    var(--ink) calc(var(--ring) + 16%),
+    var(--ink) calc(var(--ring) + 18%)
   );
-  transition: background 0.4s ease;
+  animation: eyeTunnel 1.6s linear infinite;
 }
-
+@keyframes eyeTunnel {
+  from { --ring: 0%; }
+  to   { --ring: 18%; }
+}
+/* Bold cartoon outline around each eye */
 .eye-rings {
   position: absolute;
-  inset: -8%;
-  background: radial-gradient(
-    circle at center,
-    transparent 0%,
-    rgba(0,0,0,0.65) 9%,  transparent 13%,
-    rgba(0,0,0,0.6)  22%, transparent 26%,
-    rgba(0,0,0,0.55) 38%, transparent 42%,
-    rgba(0,0,0,0.5)  54%, transparent 58%,
-    rgba(0,0,0,0.45) 72%, transparent 76%
-  );
-  animation: eyeRings 1.8s linear infinite;
-}
-@keyframes eyeRings {
-  0% { transform: scale(0.3); opacity: 1; }
-  100% { transform: scale(1.9); opacity: 0; }
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--ink);
 }
 
 .eye-core {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20%;
-  height: 20%;
+  width: 14%;
+  height: 14%;
   background: var(--ink);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 3;
-  box-shadow: 0 0 8px rgba(0,0,0,0.6) inset;
   transition: transform 0.3s;
 }
 
-body.searching .eye-rings { animation-duration: 0.45s; }
-body.searching .eye-core { transform: translate(-50%, -50%) scale(1.5); }
-body.eating .eye-rings { animation-duration: 0.85s; }
-body.eating .eye-core { transform: translate(-50%, -50%) scale(1.3); }
+body.searching .eye-base { animation-duration: 0.4s; }
+body.searching .eye-core { transform: translate(-50%, -50%) scale(1.4); }
+body.eating .eye-base { animation-duration: 0.8s; }
+body.eating .eye-core { transform: translate(-50%, -50%) scale(1.2); }
 
 /* Food orbit during search */
 .food-orbit {
