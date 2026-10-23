@@ -29,7 +29,7 @@ const MAX_POST_BYTES = 1024;
 const SAVES_PER_MINUTE = 5; // per IP address, across all boards
 
 // Same name rules as names.js on the website (kept in sync by hand).
-const NAME_MAX = 10;
+const NAME_MAX = 15;
 const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'TITS', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ', 'HOE', 'HO', 'ANUS', 'ARSE', 'RAPE', 'SPIC'];
 const NOT_ALLOWED_INSIDE = ['FUCK', 'FUK', 'FCK', 'PHUK', 'SHIT', 'SH1T', 'CUNT', 'NIGG', 'N1GG', 'NIGA', 'FAGG', 'FAG0',
   'DICK', 'D1CK', 'COCK', 'C0CK', 'PUSSY', 'BITCH', 'B1TCH', 'NAZI', 'HITLER', 'KKK', 'PENIS', 'VAGINA', 'SLUT', 'WHORE',
@@ -45,7 +45,7 @@ function nameBlocked(name) {
 function cleanEntry(e, board) {
   if (!e || typeof e.name !== 'string') return null;
   const name = e.name.toUpperCase();
-  if (!/^[A-Z0-9]{1,10}$/.test(name) || name.length > NAME_MAX || nameBlocked(name)) return null;
+  if (!/^[A-Z0-9]{1,15}$/.test(name) || name.length > NAME_MAX || nameBlocked(name)) return null;
   if (!Number.isInteger(e.score) || e.score < 0 || e.score >= board.maxScore) return null;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(e.date || '')) ? e.date : todayPacific();
   const entry = { name, score: e.score };

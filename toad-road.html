@@ -181,7 +181,7 @@ canvas { display: block; }
 .initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
 .initials-row { display: flex; gap: 8px; }
 .initials input {
-  width: min(11.5em, 58vw);
+  width: min(15em, 72vw);
   font-family: 'Bagel Fat One', cursive;
   font-size: 1.2rem;
   letter-spacing: 1px;
@@ -234,7 +234,7 @@ canvas { display: block; }
       <form class="initials" id="initialsForm" hidden>
         <label for="initials">You made the board! Your name:</label>
         <div class="initials-row">
-          <input id="initials" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="TOADMASTER">
+          <input id="initials" maxlength="15" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="TOADMASTER">
           <button class="btn small" type="submit" id="saveScore">SAVE</button>
         </div>
       </form>
@@ -683,7 +683,7 @@ function onlineBoard() { return !!SCORES_URL; }
 
 function cleanBoard(list) {
   return (Array.isArray(list) ? list : [])
-    .filter(e => e && typeof e.name === 'string' && /^[A-Z0-9]{1,10}$/.test(e.name) && !nameBlocked(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
+    .filter(e => e && typeof e.name === 'string' && /^[A-Z0-9]{1,15}$/.test(e.name) && !nameBlocked(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
     .map(e => ({ name: e.name, score: e.score, level: Math.max(1, Math.min(999, parseInt(e.level, 10) || 1)), date: String(e.date || '').slice(0, 10) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, BOARD_SIZE);

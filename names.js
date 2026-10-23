@@ -1,7 +1,7 @@
 // High-score name rules shared by toad-road.html and tongue-time.html.
 // The Cloudflare Worker (worker/src/index.js) has its own copy: keep them in sync.
 
-const NAME_MAX = 10; // high-score names: 1-10 letters/numbers
+const NAME_MAX = 15; // high-score names: 1-15 letters/numbers (the Worker allows the same)
 // Names are blocked if they ARE one of these (short words that show up inside
 // normal names, e.g. "ASS" in "GRASS", so they're only blocked on their own)...
 const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'TITS', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ', 'HOE', 'HO', 'ANUS', 'ARSE', 'RAPE', 'SPIC'];
