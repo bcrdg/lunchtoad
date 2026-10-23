@@ -688,6 +688,54 @@ body.revealed .result-card {
 }
 .restaurant-town:empty { display: none; }
 
+.map-links {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.map-links.hidden { display: none; }
+.info-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.info-buttons [hidden] { display: none; }
+.restaurant-address {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+.restaurant-address:empty { display: none; }
+.map-link {
+  display: inline-block;
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.95rem;
+  letter-spacing: 1.5px;
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+  background: var(--toad-green);
+  border: 3px solid var(--ink);
+  border-radius: 50px;
+  padding: 6px 18px;
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+}
+.map-link:hover { background: var(--toad-dark); }
+.map-link:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.map-alt {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--ink);
+  opacity: 0.6;
+}
+.map-alt:hover { opacity: 1; }
+
 /* "X recommends the Y" — only for local restaurants that sent us a pick */
 .rec {
   margin-top: 10px;
@@ -813,6 +861,15 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
     <div class="cuisine-tag" id="cuisineTag">READY</div>
     <div class="restaurant-name" id="restaurantName">Click below to begin...</div>
     <div class="restaurant-town" id="restaurantTown"></div>
+    <div class="map-links hidden" id="mapLinks">
+      <div class="restaurant-address" id="restaurantAddress"></div>
+      <div class="info-buttons">
+        <a class="map-link" id="mapLink" target="_blank" rel="noopener">📍 DIRECTIONS</a>
+        <a class="map-link" id="phoneLink" hidden>📞 CALL</a>
+        <a class="map-link" id="webLink" target="_blank" rel="noopener" hidden>🌐 WEBSITE</a>
+      </div>
+      <a class="map-alt" id="mapAlt" target="_blank" rel="noopener"></a>
+    </div>
     <div class="rec hidden" id="recBox">
       <div class="rec-line" id="recLine"></div>
       <div class="rec-desc" id="recDesc"></div>
@@ -1150,6 +1207,57 @@ const nameDisplay = document.getElementById('restaurantName');
 const cuisineTag = document.getElementById('cuisineTag');
 const townDisplay = document.getElementById('restaurantTown');
 const recBox = document.getElementById('recBox');
+const mapLinks = document.getElementById('mapLinks');
+
+// Apple devices (iPhone, iPad, Mac) get Apple Maps first; everything else gets Google Maps.
+// iPadOS reports itself as "Macintosh", so it's covered by the Mac check.
+const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+
+// Full place names for map searches (Mi-Wuk's official name is Mi-Wuk Village).
+const TOWN_MAP_NAMES = { miwuk: 'Mi-Wuk Village' };
+
+function mapQuery(r) {
+  // Name + street address pins the exact business; name + town is the fallback.
+  return `${r.name}, ${r.address || (TOWN_MAP_NAMES[r.town] || TOWNS[r.town]) + ', CA'}`;
+}
+function appleMapsUrl(r) {
+  return 'https://maps.apple.com/?q=' + encodeURIComponent(mapQuery(r));
+}
+function googleMapsUrl(r) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery(r));
+}
+
+function showMapLinks(r) {
+  const main = document.getElementById('mapLink');
+  const alt = document.getElementById('mapAlt');
+  if (IS_APPLE) {
+    main.href = appleMapsUrl(r);
+    alt.href = googleMapsUrl(r);
+    alt.textContent = 'or open in Google Maps';
+    alt.hidden = false;
+  } else {
+    main.href = googleMapsUrl(r);
+    alt.hidden = true;
+  }
+
+  document.getElementById('restaurantAddress').textContent = r.address || '';
+
+  const phoneLink = document.getElementById('phoneLink');
+  const digits = String(r.phone || '').replace(/\D/g, '');
+  phoneLink.hidden = digits.length < 10;
+  if (!phoneLink.hidden) {
+    // Shows the number itself so it's useful on desktops, where tel: links can't dial.
+    const d = digits.slice(-10);
+    phoneLink.href = 'tel:+1' + d;
+    phoneLink.textContent = `📞 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  }
+
+  const webLink = document.getElementById('webLink');
+  webLink.hidden = !/^https?:\/\//i.test(r.website || '');
+  if (!webLink.hidden) webLink.href = r.website;
+
+  mapLinks.classList.remove('hidden');
+}
 
 function showRecommendation(r) {
   const rec = !r.chain && r.rec && r.rec.dish ? r.rec : null;
@@ -1193,6 +1301,7 @@ function startSearch() {
   cuisineTag.textContent = '...';
   townDisplay.textContent = '';
   recBox.classList.add('hidden');
+  mapLinks.classList.add('hidden');
 
   cycleInterval = setInterval(() => {
     const r = active[Math.floor(Math.random() * active.length)];
@@ -1219,6 +1328,7 @@ function reveal() {
   nameDisplay.textContent = chosen.name;
   cuisineTag.textContent = meta.label;
   townDisplay.textContent = activeTowns.size > 1 ? '📍 ' + TOWNS[chosen.town] : '';
+  showMapLinks(chosen);
   showRecommendation(chosen);
 
   burstSparkles();
