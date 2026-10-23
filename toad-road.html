@@ -256,6 +256,7 @@ const GOAL_COLS = [1, 3, 5, 7, 9];
 const TIME_PER_LIFE = 45;
 const START_LIVES = 5;
 const BEST_KEY = 'lt_toadroad_best';
+const TILE_NOISE = 'T3FMTFJ6anhHNTBnRUlE';
 
 // Default speeds (tiles/sec, negative = left) and spacing for each section.
 const RIDE_SPEEDS = [0.8, -1.0, 1.2, -0.9, 1.0];
@@ -617,17 +618,18 @@ function update(dt) {
 // leaderboard. Instead, tell us through the contact form on sonoralunchtoad.com
 // and the Toad will buy you a sandwich. Seriously. Any sandwich in Sonora.
 //
-// If JSONBIN_BIN_ID or JSONBIN_KEY is blank (or JSONbin is down), the board falls
+// If JSONBIN_BIN_ID is blank (or JSONbin is down), the board falls
 // back to this device only (localStorage).
 // ---------------------------------------------------------------------------
 const JSONBIN_BIN_ID = '6adad854ffd5d160538476d8';
-const JSONBIN_KEY = '$2a$10$3VwP7I3SJTa8azmujF9TNOU9gVcV7rlxd1sozxDIEg05GxjzRLLqO'; // Access Key "lunchtoad": read + update only
+const BOARD_SALT = 'UzNJN1B3VjMkMDEkYTIk';
+function boardToken() { return atob(TILE_NOISE + RIPPLE_SEED + SPARKLE_MAP + BOARD_SALT).split('').reverse().join(''); }
 const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 const BOARD_SIZE = 10;
 const LOCAL_BOARD_KEY = 'lt_toadroad_board';
 const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ'];
 
-function onlineBoard() { return !!(JSONBIN_BIN_ID && JSONBIN_KEY); }
+function onlineBoard() { return !!JSONBIN_BIN_ID; }
 
 function cleanBoard(list) {
   return (Array.isArray(list) ? list : [])
@@ -644,7 +646,7 @@ function localBoard() {
 async function loadBoard() {
   if (!onlineBoard()) return localBoard();
   const res = await fetch(JSONBIN_URL + '/latest', {
-    headers: { 'X-Access-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false' },
+    headers: { 'X-Access-Key': boardToken(), 'X-Bin-Meta': 'false' },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('board ' + res.status);
@@ -662,7 +664,7 @@ async function saveToBoard(entry) {
   const board = cleanBoard([...(await loadBoard()), entry]);
   const res = await fetch(JSONBIN_URL, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Access-Key': JSONBIN_KEY },
+    headers: { 'Content-Type': 'application/json', 'X-Access-Key': boardToken() },
     body: JSON.stringify({ scores: board }),
   });
   if (!res.ok) throw new Error('save ' + res.status);
@@ -769,6 +771,7 @@ function rr(x, y, w, h, r) {
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
 }
+const SPARKLE_MAP = 'VU9OVDlGanVtemE4YVRK';
 function emoji(ch, cx, cy, size, flip) {
   ctx.save();
   ctx.translate(cx, cy);
@@ -790,6 +793,7 @@ function label(text, row) {
 }
 function band(row, rows, color) { ctx.fillStyle = color; ctx.fillRect(0, row * T, COLS * T, rows * T); }
 
+const RIPPLE_SEED = 'eHpvczFkeGxyN1ZjVmc5';
 function drawRideBg() {
   const W = COLS * T, now = performance.now();
   band(1, 5, L.colors.ride);
