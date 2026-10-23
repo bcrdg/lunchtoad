@@ -29,18 +29,23 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+html { height: 100%; }
 
 body {
   font-family: 'Fredoka', sans-serif;
   font-weight: 600;
   background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  background-color: var(--bg-deep);
+  background-attachment: fixed;
   color: var(--cream);
   min-height: 100vh;
+  min-height: 100dvh;
+  /* Centered with auto margins on .container instead of align-items:center,
+     so when content is taller than a phone screen it overflows downward
+     (scrollable) instead of off the top (unreachable). */
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  flex-direction: column;
+  padding: 24px 16px;
   overflow-x: hidden;
   position: relative;
 }
@@ -75,6 +80,7 @@ body {
   text-align: center;
   width: 100%;
   max-width: 540px;
+  margin: auto;
 }
 
 h1 {
@@ -693,7 +699,16 @@ body.cuisine-coffee    { --c1: #B07242; --c2: #2A1810; }
 body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 
 @media (max-width: 480px) {
-  h1 { letter-spacing: 2px; }
+  h1 {
+    font-size: clamp(1.9rem, 11vw, 2.6rem);
+    letter-spacing: 1px;
+    -webkit-text-stroke-width: 3px;
+    text-shadow:
+      4px 4px 0 var(--ink),
+      4px 4px 0 var(--hot-pink),
+      8px 8px 0 var(--ink);
+    margin-top: 8px;
+  }
   .tagline { font-size: 0.9rem; }
 }
 </style>
