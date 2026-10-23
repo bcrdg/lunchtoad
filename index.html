@@ -766,6 +766,31 @@ body.revealed .result-card {
   max-width: 100%;
 }
 .secret-link { text-decoration: none; }
+.secret-row.hidden, .secret-link.hidden { display: none; }
+.secret-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.secret-next { font-size: 0.85rem; opacity: 0.75; margin-top: 12px; }
+.secret-next:empty { display: none; }
+.recipe-book button { display: block; }
+.recipe-book strong { margin-bottom: 2px; }
+
+/* Toad skins (15 visits): recolor the classic greens in the toad SVG */
+.toad [fill="#5A8C3F"] { fill: var(--skin, #5A8C3F); }
+.toad [fill="#3E6B2D"] { fill: var(--skin-dark, #3E6B2D); }
+
+/* Toad hats (10 visits): an emoji perched between his eyes, bobbing with him */
+.toad-hat {
+  position: absolute;
+  left: 50%;
+  top: 1%;
+  z-index: 4;
+  font-size: calc(min(380px, 88vw) * 0.27);
+  line-height: 1;
+  transform: translateX(-50%) rotate(-8deg);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+.toad-hat:empty { display: none; }
+body.king.has-hat .crown { display: none; }
 
 /* Unlock celebration: fireworks canvas + message */
 .fireworks {
@@ -1249,6 +1274,8 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
       </div>
       <!-- Invisible tap target over the mouth (part of the Toad Road easter egg) -->
       <div class="mouth-hit" id="mouthHit" aria-hidden="true"></div>
+      <!-- Visit reward (10 visits): the hat picked in Secret Features -->
+      <div class="toad-hat" id="toadHat" aria-hidden="true"></div>
       <!-- "KING TOAD" crown: shown when the lt_king cookie is set (beat Toad Road on hard mode) -->
       <svg class="crown" viewBox="0 0 200 130" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -1380,11 +1407,11 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
       </button>
     </div>
 
-    <!-- Unlocked after 10 visits (see UNLOCKS in the script) -->
+    <!-- Visit rewards (see MILESTONES in the script). data-unlock = visits needed -->
     <div class="secret-features hidden" id="secretFeatures">
       <div class="secret-title">🔓 SECRET FEATURES</div>
       <p class="secret-note">For regulars only. Thanks for coming back, friend.</p>
-      <label class="secret-row">
+      <label class="secret-row hidden" data-unlock="5">
         <span>👁 TOAD EYE COLOR</span>
         <select id="eyeColor">
           <option value="">Classic (changes with the food)</option>
@@ -1395,7 +1422,36 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
           <option value="lava">Lava red</option>
         </select>
       </label>
-      <a class="picky-toggle secret-link" href="toad-road.html">🐸 TOAD ROAD SHORTCUT</a>
+      <label class="secret-row hidden" data-unlock="10">
+        <span>🎩 TOAD HAT</span>
+        <select id="hatPick">
+          <option value="">No hat</option>
+          <option value="tophat">🎩 Top hat</option>
+          <option value="cap">🧢 Ball cap</option>
+          <option value="sunhat">👒 Sun hat</option>
+          <option value="grad">🎓 Graduation cap</option>
+          <option value="mushroom">🍄 Mushroom</option>
+          <option value="helmet">⛑️ Rescue helmet</option>
+        </select>
+      </label>
+      <label class="secret-row hidden" data-unlock="15">
+        <span>🎨 TOAD SKIN</span>
+        <select id="skinPick">
+          <option value="">Classic green</option>
+          <option value="blue">Poison-dart blue</option>
+          <option value="gold">Golden</option>
+          <option value="purple">Purple</option>
+          <option value="pink">Bubblegum pink</option>
+          <option value="red">Tomato red</option>
+          <option value="choc">Chocolate</option>
+          <option value="ghost">Ghost</option>
+        </select>
+      </label>
+      <div class="secret-links">
+        <a class="picky-toggle secret-link hidden" data-unlock="20" href="toad-road.html">🐸 TOAD ROAD SHORTCUT</a>
+        <button type="button" class="picky-toggle secret-link hidden" data-unlock="25" id="recipeBookBtn">📖 THE TOAD'S RECIPE BOOK</button>
+      </div>
+      <p class="secret-next" id="secretNext"></p>
     </div>
 
     <button class="contact-btn" id="contactBtn">
@@ -1405,6 +1461,16 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
     </button>
 
     <a class="disclaimer-link" href="disclaimer.html">📜 Disclaimer &amp; fine print</a>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="recipeBookOverlay">
+  <div class="modal" role="dialog" aria-labelledby="recipeBookTitle">
+    <div class="modal-header">
+      <h2 id="recipeBookTitle">📖 RECIPE BOOK</h2>
+      <button class="modal-close" id="recipeBookClose" aria-label="Close">✕</button>
+    </div>
+    <div class="coupon-body"><ul class="coupon-list recipe-book" id="recipeBookList"></ul></div>
   </div>
 </div>
 
@@ -1528,6 +1594,8 @@ const restaurants = [
 let customFood = false;
 let includeChains = false; // locally owned only by default
 let soundOn = true;        // sound effects, on by default
+let toadHat = '';         // secret feature (10 visits): hat key from HATS
+let toadSkin = '';        // secret feature (15 visits): skin key from SKINS
 let eyeColor = '';        // secret feature: fixed eye color ('' = classic, changes with the food)
 let moreThanLunch = false;
 let activeMeals = new Set(['lunch']);
@@ -1558,6 +1626,8 @@ function loadState() {
       includeChains = !!data.includeChains;
       soundOn = data.sound !== false;
       eyeColor = typeof data.eyeColor === 'string' ? data.eyeColor : '';
+      toadHat = typeof data.hat === 'string' ? data.hat : '';
+      toadSkin = typeof data.skin === 'string' ? data.skin : '';
       moreThanLunch = !!data.moreThanLunch;
       if (Array.isArray(data.meals)) {
         const meals = data.meals.filter(m => MEALS[m]);
@@ -1582,6 +1652,8 @@ function saveFilters() {
     includeChains,
     sound: soundOn,
     eyeColor,
+    hat: toadHat,
+    skin: toadSkin,
     moreThanLunch,
     meals: [...activeMeals],
     cuisines: [...activeCuisines],
@@ -2762,9 +2834,7 @@ function burstSparkles() {
 // ---- Visit counter ----
 // Cookie "lt_visits" counts visits for a year. A visit is counted once per
 // browser session (tab), so refreshing the page doesn't add to it.
-// Loyal visitors can unlock features: add them to UNLOCKS as
-//   { at: 10, unlock() { ...show the feature... } }
-// and each one runs on every visit once the count reaches `at`.
+// Loyal visitors unlock rewards: see MILESTONES under "Visit rewards" below.
 const VISITS_COOKIE = 'lt_visits';
 const VISIT_COUNTED_KEY = 'lt_visit_counted';
 function countVisit() {
@@ -2781,7 +2851,7 @@ function countVisit() {
       try { sessionStorage.setItem(VISIT_COUNTED_KEY, '1'); } catch (e) {}
       // Count milestones at or below N as already celebrated, so the next one
       // (e.g. 10 after ?visits=9, 20 after ?visits=19) gets its fireworks.
-      const passed = [5, 10, 20, 30, 50].filter(m => m <= n); // keep in sync with MILESTONES
+      const passed = [5, 10, 15, 20, 25, 30, 50].filter(m => m <= n); // keep in sync with MILESTONES
       storageSet('lt_celebrated', String(passed.length ? passed[passed.length - 1] : 0)); // see CELEBRATED_KEY below
       storageRemove('lt_unlock10_seen'); // old flag
       params.delete('visits');
@@ -2811,22 +2881,22 @@ if (getCookie(KING_COOKIE) === '1') {
   setCookie(KING_COOKIE, '1', 400);
   document.body.classList.add('king');
 }
-const UNLOCKS = [];
-function applyUnlocks() {
-  UNLOCKS.forEach(u => { if (visitCount >= u.at) { try { u.unlock(); } catch (e) {} } });
-}
-
-// ---- Visit milestones: fireworks at 5, 10, 20, 30 and 50 visits; secret features at 10 ----
-const SECRET_AT = 10;
-// Each milestone gets fireworks once per device, with its own message.
+// ---- Visit rewards ----
+// Each reward appears in the Secret Features section of Lunch Options once
+// visitCount reaches its number (markup: elements with data-unlock="N").
+// Every milestone below gets fireworks and a message once per device.
 const MILESTONES = {
-  5:  'The Toad remembers your face. Welcome back, regular.',
-  10: '', // the "unlocked new features" message
-  20: 'The Toad has started telling the other toads about you.',
-  30: 'The Toad has named a lily pad after you.',
-  50: 'Fifty visits! The Toad weeps tiny toad tears. At this point he works for you.',
+  5:  { title: 'YOU UNLOCKED: TOAD EYE COLORS!', text: 'Five visits! Pick the color of the Toad\'s hypnotic eyes in Lunch Options.', reward: true },
+  10: { title: 'YOU UNLOCKED: TOAD HATS!', text: 'Ten visits! The Toad will now wear a hat of your choosing.', reward: true },
+  15: { title: 'YOU UNLOCKED: TOAD SKINS!', text: 'Fifteen visits! Paint the Toad any color you like.', reward: true },
+  20: { title: 'YOU UNLOCKED: THE TOAD ROAD SHORTCUT!', text: 'Twenty visits! Skip the secret pokes and go straight to the game.', reward: true },
+  25: { title: 'YOU UNLOCKED: THE TOAD\'S RECIPE BOOK!', text: 'Twenty-five visits! Browse every recipe the Toad knows, any time.', reward: true },
+  30: { title: '30 VISITS!', text: 'The Toad has named a lily pad after you.' },
+  50: { title: '50 VISITS!', text: 'Fifty visits! The Toad weeps tiny toad tears. At this point he works for you.' },
 };
+const SECRET_FIRST = 5; // the Secret Features section appears with the first reward
 const CELEBRATED_KEY = 'lt_celebrated'; // highest milestone that has had its fireworks
+
 const EYE_COLORS = {
   hypno: ['#FF5A1F', '#FFB020'],
   toxic: ['#39FF14', '#0B6623'],
@@ -2834,30 +2904,90 @@ const EYE_COLORS = {
   royal: ['#8A2BE2', '#FF3E8F'],
   lava:  ['#FF1A1A', '#FFD23F'],
 };
-function applyEyeColor(key) {
-  // Inline style on <body> beats the per-cuisine colors, so a chosen color sticks.
-  const c = EYE_COLORS[key];
-  if (c) {
-    document.body.style.setProperty('--c1', c[0]);
-    document.body.style.setProperty('--c2', c[1]);
-  } else {
-    document.body.style.removeProperty('--c1');
-    document.body.style.removeProperty('--c2');
-  }
+// Toad skins: [main body color, darker spots/feet]. They recolor every part of
+// the SVG drawn in the classic greens (see the .toad [fill=...] CSS rules).
+const SKINS = {
+  blue:   ['#2F7FD8', '#1B4F9C'],
+  gold:   ['#E0B23A', '#A8801C'],
+  purple: ['#8A5AC8', '#5E3A96'],
+  pink:   ['#F07AB0', '#C24E86'],
+  red:    ['#D8443A', '#9C2A22'],
+  choc:   ['#8B5A2B', '#5E3A17'],
+  ghost:  ['#D9E4EC', '#A9B8C4'],
+};
+const HATS = { tophat: '🎩', cap: '🧢', sunhat: '👒', grad: '🎓', mushroom: '🍄', helmet: '⛑️' };
+
+function unlocked(n) { return visitCount >= n; }
+function setBodyVars(pairs) {
+  // Inline style on <body> beats the per-cuisine eye colors, so choices stick.
+  Object.entries(pairs).forEach(([k, v]) => v ? document.body.style.setProperty(k, v) : document.body.style.removeProperty(k));
 }
-UNLOCKS.push({
-  at: SECRET_AT,
-  unlock() {
-    document.getElementById('secretFeatures').classList.remove('hidden');
-    const select = document.getElementById('eyeColor');
-    select.value = EYE_COLORS[eyeColor] ? eyeColor : '';
-    applyEyeColor(select.value);
-    select.addEventListener('change', () => {
-      eyeColor = select.value;
-      applyEyeColor(eyeColor);
-      saveFilters();
+function applyEyeColor(key) {
+  const c = unlocked(5) && EYE_COLORS[key];
+  setBodyVars({ '--c1': c && c[0], '--c2': c && c[1] });
+}
+function applySkin(key) {
+  const c = unlocked(15) && SKINS[key];
+  setBodyVars({ '--skin': c && c[0], '--skin-dark': c && c[1] });
+}
+function applyHat(key) {
+  const emoji = unlocked(10) && HATS[key];
+  document.getElementById('toadHat').textContent = emoji || '';
+  document.body.classList.toggle('has-hat', !!emoji); // a chosen hat replaces the KING TOAD crown
+}
+function hookSelect(id, value, valid, apply, save) {
+  const select = document.getElementById(id);
+  select.value = valid[value] ? value : '';
+  apply(select.value);
+  select.addEventListener('change', () => { save(select.value); apply(select.value); saveFilters(); });
+}
+
+function applyUnlocks() {
+  document.getElementById('secretFeatures').classList.toggle('hidden', !unlocked(SECRET_FIRST));
+  document.querySelectorAll('[data-unlock]').forEach(el => {
+    el.classList.toggle('hidden', !unlocked(parseInt(el.dataset.unlock, 10)));
+  });
+  hookSelect('eyeColor', eyeColor, EYE_COLORS, applyEyeColor, v => { eyeColor = v; });
+  hookSelect('hatPick', toadHat, HATS, applyHat, v => { toadHat = v; });
+  hookSelect('skinPick', toadSkin, SKINS, applySkin, v => { toadSkin = v; });
+  const next = Object.keys(MILESTONES).map(Number).find(m => MILESTONES[m].reward && m > visitCount);
+  document.getElementById('secretNext').textContent = next
+    ? '🔒 Next secret unlocks at ' + next + ' visits. You\'re at ' + visitCount + '.'
+    : '';
+}
+
+// The Toad's recipe book (25 visits): every recipe, any time.
+const recipeBookOverlay = document.getElementById('recipeBookOverlay');
+function openRecipeBook() {
+  const list = document.getElementById('recipeBookList');
+  list.innerHTML = '';
+  [...RECIPES].sort((a, b) => a.name.localeCompare(b.name)).forEach(r => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    const name = document.createElement('strong');
+    name.textContent = r.name;
+    const region = document.createElement('small');
+    region.textContent = '🌍 ' + r.region + ' · ⏱ ' + r.time;
+    b.appendChild(name);
+    b.appendChild(region);
+    b.addEventListener('click', () => {
+      closeRecipeBook();
+      if (!optionsPanel.classList.contains('hidden')) optionsToggle.click();
+      revealRecipe(r);
+      window.scrollTo(0, 0);
     });
-  },
+    li.appendChild(b);
+    list.appendChild(li);
+  });
+  recipeBookOverlay.classList.remove('hidden');
+}
+function closeRecipeBook() { recipeBookOverlay.classList.add('hidden'); }
+document.getElementById('recipeBookBtn').addEventListener('click', openRecipeBook);
+document.getElementById('recipeBookClose').addEventListener('click', closeRecipeBook);
+recipeBookOverlay.addEventListener('click', e => { if (e.target === recipeBookOverlay) closeRecipeBook(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !recipeBookOverlay.classList.contains('hidden')) closeRecipeBook();
 });
 
 // If someone skips past a milestone (edited cookie, or the ?visits= test link),
@@ -2875,22 +3005,28 @@ function celebrateMilestones() {
 }
 
 function celebrateUnlock(milestone) {
-  const first = milestone === SECRET_AT;
+  const m = MILESTONES[milestone];
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!calm) fireworks(4.5);
   const toast = document.createElement('div');
   toast.className = 'unlock-toast';
   toast.setAttribute('role', 'dialog');
-  toast.setAttribute('aria-label', first ? 'New features unlocked' : milestone + ' visits');
-  const line = MILESTONES[milestone] || 'The Toad is honored by your loyalty.';
-  toast.innerHTML = first
-    ? `<h2>🎉 YOU'VE UNLOCKED NEW FEATURES! 🎉</h2>
-       <p>${milestone} visits! The Toad sees your loyalty. Look for the secret features in Lunch Options.</p>
-       <button type="button" data-act="show">SHOW ME</button>
-       <button type="button" class="plain" data-act="close">LATER</button>`
-    : `<h2>🎉 ${milestone} VISITS! 🎉</h2>
-       <p>${line}</p>
-       <button type="button" data-act="close">THANKS, TOAD</button>`;
+  toast.setAttribute('aria-label', m.title);
+  const h2 = document.createElement('h2');
+  h2.textContent = '🎉 ' + m.title + ' 🎉';
+  const p = document.createElement('p');
+  p.textContent = m.text;
+  toast.appendChild(h2);
+  toast.appendChild(p);
+  const buttons = m.reward ? [['show', 'SHOW ME', ''], ['close', 'LATER', 'plain']] : [['close', 'THANKS, TOAD', '']];
+  buttons.forEach(([act, label, cls]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.act = act;
+    b.textContent = label;
+    if (cls) b.className = cls;
+    toast.appendChild(b);
+  });
   toast.addEventListener('click', e => {
     const act = e.target.dataset && e.target.dataset.act;
     if (!act) return;
@@ -2903,6 +3039,7 @@ function celebrateUnlock(milestone) {
   });
   document.body.appendChild(toast);
 }
+
 
 // Canvas fireworks: rockets fly up, burst into colored sparks that fall and fade.
 function fireworks(seconds) {
