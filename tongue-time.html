@@ -538,15 +538,16 @@ function emoji(ch, x, y, size, rot, flip) {
 function draw(now) {
   drawBackground();
   flies.forEach(f => {
-    const flip = Math.cos(f.a) > 0;
+    // Head first: the 🪰 emoji's head is at the top, so rotate by the heading + 90°
+    const turn = f.caught ? 0 : f.a + Math.PI / 2;
     if (f.kind === 'golden') {
       ctx.save();
       ctx.shadowColor = '#FFD23F'; ctx.shadowBlur = 14;
-      emoji('🪰', f.x, f.y, 28, 0, flip);
+      emoji('🪰', f.x, f.y, 28, turn);
       ctx.restore();
       emoji('✨', f.x + 12, f.y - 12, 14);
     } else {
-      emoji('🪰', f.x, f.y + Math.sin(now / 60 + f.wob) * 1.5, 26, 0, flip);
+      emoji('🪰', f.x, f.y + Math.sin(now / 60 + f.wob) * 1.5, 26, turn);
     }
   });
   foods.forEach(o => emoji(o.emoji, o.x, o.y, 34, o.rot));
