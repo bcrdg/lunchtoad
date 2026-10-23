@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tongue Time — Sonora Lunch Toad</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0F0F1A;
+  --bg: #1B1147;
+  --bg-deep: #0A0820;
+  --hot-pink: #FF3E8F;
+  --yellow: #FFD23F;
+  --cream: #FFF8E7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overscroll-behavior: none; }
+body {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  background-color: var(--bg-deep);
+  background-attachment: fixed;
+  color: var(--cream);
+  min-height: 100vh;
+  padding: 14px 12px 24px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+main { max-width: 480px; margin: 0 auto; text-align: center; }
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink), 4px 4px 0 var(--hot-pink), 8px 8px 0 var(--ink);
+  letter-spacing: 2px;
+  transform: rotate(-2deg);
+}
+.sub { font-style: italic; font-weight: 500; opacity: 0.85; margin: 4px 0 10px; font-size: 0.9rem; }
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  letter-spacing: 1px;
+  font-size: 0.95rem;
+  margin: 0 auto 6px;
+}
+.hud b { color: var(--yellow); font-weight: 400; }
+.hud .combo { color: var(--hot-pink); min-width: 3em; }
+.mute { background: none; border: none; font-size: 1.1rem; cursor: pointer; }
+.stage {
+  position: relative;
+  margin: 0 auto;
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 var(--ink);
+  touch-action: none;
+  cursor: crosshair;
+}
+canvas { display: block; width: 100%; height: auto; }
+.timer { height: 8px; background: rgba(255, 248, 231, 0.15); border-radius: 4px; margin: 8px auto 0; overflow: hidden; }
+.timer div { height: 100%; background: var(--yellow); width: 100%; transition: background 0.3s; }
+.timer div.low { background: var(--hot-pink); }
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 32, 0.84);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: default;
+}
+.overlay[hidden] { display: none; }
+.overlay h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: clamp(1.6rem, 8vw, 2.3rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 2px var(--ink);
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.overlay p { font-weight: 500; line-height: 1.45; max-width: 330px; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; text-align: left; font-weight: 500; font-size: 0.95rem; }
+.legend span:nth-child(odd) { font-size: 1.3rem; text-align: center; }
+.btn {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+  background: var(--hot-pink);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 26px;
+  box-shadow: 5px 5px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn.alt { background: var(--yellow); color: var(--ink); -webkit-text-stroke: 0; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+.best { color: var(--yellow); }
+.back { margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>TONGUE TIME</h1>
+  <p class="sub">"The Toad is hungry. Help him."</p>
+
+  <div class="hud">
+    <span>SCORE <b id="score">0</b></span>
+    <span class="combo" id="combo"></span>
+    <span>BEST <b id="best">0</b></span>
+    <button class="mute" id="mute" aria-label="Sound on">🔊</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="game" width="360" height="480" aria-label="Tongue Time game"></canvas>
+    <div class="overlay" id="startScreen">
+      <h2>TONGUE TIME</h2>
+      <p>Tap the flies and the Toad zaps them with his tongue. Catch them in a row for a combo!</p>
+      <div class="legend">
+        <span>🪰</span><span>Fly: 10 points × combo</span>
+        <span>✨</span><span>Golden fly: 50 points × combo</span>
+        <span>🌮</span><span>Falling food: +25 and +3 seconds</span>
+        <span>🐝</span><span>Bee: don't! −5 seconds</span>
+      </div>
+      <button class="btn" id="startBtn">START</button>
+    </div>
+    <div class="overlay" id="overScreen" hidden>
+      <h2 id="overTitle">TIME'S UP!</h2>
+      <p id="overText"></p>
+      <button class="btn" id="againBtn">AGAIN</button>
+    </div>
+  </div>
+  <div class="timer"><div id="timerBar"></div></div>
+
+  <a class="btn alt back" href="./">🐸 BACK TO THE TOAD</a>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// Tongue Time: tap the flies, the toad's tongue grabs them.
+// Reached from the main page by tapping the fly that sometimes buzzes past the toad.
+// Everything is drawn on one canvas in a fixed 360x480 coordinate space.
+// ---------------------------------------------------------------------------
+const W = 360, H = 480;
+const ROUND_SECONDS = 45;
+const MOUTH = { x: 180, y: 432 };
+const AIR_BOTTOM = H - 140;        // flies stay above the toad
+const BEST_KEY = 'lt_tongue_best';
+const FOODS = ['🌮', '🍔', '🍕', '🌭', '🍩', '🥨', '🌯'];
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const stage = document.getElementById('stage');
+
+// Sharp drawing on high-density screens
+function fitCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+
+// The player's toad skin from the main page's secret features (15+ visits)
+const SKINS = {
+  blue: ['#2F7FD8', '#1B4F9C'], gold: ['#E0B23A', '#A8801C'], purple: ['#8A5AC8', '#5E3A96'],
+  pink: ['#F07AB0', '#C24E86'], red: ['#D8443A', '#9C2A22'], choc: ['#8B5A2B', '#5E3A17'], ghost: ['#D9E4EC', '#A9B8C4'],
+};
+let skin = ['#5A8C3F', '#3E6B2D'];
+let soundOn = true;
+try {
+  const prefs = JSON.parse(localStorage.getItem('lt_filters') || '{}');
+  const visits = parseInt((document.cookie.match(/(?:^|; )lt_visits=(\d+)/) || [])[1] || '0', 10);
+  if (visits >= 15 && SKINS[prefs.skin]) skin = SKINS[prefs.skin];
+  soundOn = prefs.sound !== false;
+} catch (e) {}
+
+let best = 0;
+try { best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) {}
+document.getElementById('best').textContent = best;
+
+// ---- Sounds (made live with Web Audio, no files) ----
+let actx = null;
+function audio() {
+  if (!soundOn) return null;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!actx) { try { actx = new AC(); } catch (e) { return null; } }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(type, f0, f1, len, vol, delay) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + (delay || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f1, t + len);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(a.destination);
+  o.start(t);
+  o.stop(t + len + 0.02);
+}
+const sound = {
+  thwip() { tone('triangle', 300, 1200, 0.09, 0.12); },
+  gulp() { tone('sine', 420, 140, 0.14, 0.2); },
+  golden() { [880, 1320, 1760].forEach((f, i) => tone('sine', f, f * 1.01, 0.25, 0.1, i * 0.06)); },
+  food() { [660, 880, 1100, 1320].forEach((f, i) => tone('sine', f, f, 0.2, 0.09, i * 0.05)); },
+  bee() { tone('sawtooth', 220, 90, 0.35, 0.12); },
+  miss() { tone('sine', 200, 160, 0.06, 0.05); },
+  end() { [660, 520, 400].forEach((f, i) => tone('triangle', f, f * 0.98, 0.25, 0.1, i * 0.14)); },
+};
+const muteBtn = document.getElementById('mute');
+function showMute() { muteBtn.textContent = soundOn ? '🔊' : '🔇'; muteBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off'); }
+showMute();
+muteBtn.addEventListener('click', () => { soundOn = !soundOn; showMute(); });
+
+// ---- Game state ----
+let state = 'start';  // start | play | over
+let score, combo, timeLeft, elapsed, flies, foods, bees, popups, tongue, nextFood, nextBee, look, hurt;
+
+function reset() {
+  score = 0; combo = 0; timeLeft = ROUND_SECONDS; elapsed = 0;
+  flies = []; foods = []; bees = []; popups = [];
+  tongue = null; hurt = 0;
+  nextFood = 6 + Math.random() * 4;
+  nextBee = 12 + Math.random() * 4;
+  look = { x: MOUTH.x, y: 200 };
+  for (let i = 0; i < 3; i++) flies.push(makeFly());
+  updateHud();
+}
+
+const rand = (a, b) => a + Math.random() * (b - a);
+function makeFly() {
+  const golden = Math.random() < 0.08;
+  // Enter from the left or right edge, somewhere in the air
+  const fromLeft = Math.random() < 0.5;
+  return {
+    kind: golden ? 'golden' : 'fly',
+    x: fromLeft ? -15 : W + 15, y: rand(40, AIR_BOTTOM - 20),
+    a: fromLeft ? rand(-0.6, 0.6) : Math.PI + rand(-0.6, 0.6),
+    speed: (golden ? 120 : 70) + elapsed * 2.2,
+    wob: rand(0, 6.28), r: 16, caught: false,
+  };
+}
+function makeFood() {
+  return { kind: 'food', emoji: FOODS[Math.floor(Math.random() * FOODS.length)], x: rand(30, W - 30), y: -20,
+           vy: 70 + elapsed * 1.2, spin: rand(-2, 2), rot: 0, r: 20, caught: false };
+}
+function makeBee() {
+  const fromLeft = Math.random() < 0.5;
+  return { kind: 'bee', x: fromLeft ? -20 : W + 20, y: rand(60, AIR_BOTTOM - 40), dir: fromLeft ? 1 : -1,
+           speed: 85 + elapsed * 1.5, wob: rand(0, 6.28), r: 17, caught: false };
+}
+
+function updateHud() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('combo').textContent = combo > 1 ? '×' + Math.min(combo, 5) : '';
+  const bar = document.getElementById('timerBar');
+  bar.style.width = Math.max(0, timeLeft / ROUND_SECONDS * 100) + '%';
+  bar.classList.toggle('low', timeLeft < 10);
+}
+function popup(x, y, text, color) { popups.push({ x, y, text, color: color || '#FFD23F', t: 0 }); }
+
+// ---- Input: tap/click anywhere; the tongue goes for the closest thing near the tap ----
+function toGame(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+canvas.addEventListener('pointerdown', e => {
+  if (state !== 'play') return;
+  e.preventDefault();
+  const p = toGame(e);
+  look = p;
+  if (tongue) return; // one catch at a time (the tongue takes about a quarter second)
+  let target = null, bestD = Infinity;
+  [...flies, ...foods, ...bees].forEach(o => {
+    if (o.caught) return;
+    const d = Math.hypot(o.x - p.x, o.y - p.y);
+    if (d < o.r + 16 && d < bestD) { bestD = d; target = o; }
+  });
+  if (target) target.caught = true;
+  tongue = { phase: 'out', t: 0, x: target ? target.x : p.x, y: target ? target.y : p.y, prey: target };
+  sound.thwip();
+  if (!target) { combo = 0; updateHud(); }
+});
+
+// What happens when the tongue reels something in
+function eat(o) {
+  if (o.kind === 'fly' || o.kind === 'golden') {
+    combo += 1;
+    const pts = (o.kind === 'golden' ? 50 : 10) * Math.min(combo, 5);
+    score += pts;
+    popup(MOUTH.x, MOUTH.y - 40, '+' + pts, o.kind === 'golden' ? '#FFE873' : '#FFD23F');
+    o.kind === 'golden' ? sound.golden() : sound.gulp();
+  } else if (o.kind === 'food') {
+    score += 25;
+    timeLeft = Math.min(ROUND_SECONDS, timeLeft + 3);
+    popup(MOUTH.x, MOUTH.y - 40, '+25 · +3s', '#7CFF6B');
+    sound.food();
+  } else if (o.kind === 'bee') {
+    combo = 0;
+    timeLeft = Math.max(0, timeLeft - 5);
+    hurt = 0.6;
+    popup(MOUTH.x, MOUTH.y - 40, 'OUCH! −5s', '#FF3E8F');
+    sound.bee();
+  }
+  updateHud();
+}
+
+// ---- Update ----
+function update(dt) {
+  elapsed += dt;
+  timeLeft -= dt;
+  if (hurt > 0) hurt -= dt;
+  if (timeLeft <= 0) { timeLeft = 0; updateHud(); return endGame(); }
+
+  // Keep the sky stocked with flies; more as the round goes on
+  const wanted = Math.min(8, 3 + Math.floor(elapsed / 7));
+  if (flies.filter(f => !f.caught).length < wanted && Math.random() < dt * 2) flies.push(makeFly());
+
+  flies.forEach(f => {
+    if (f.caught) return;
+    f.wob += dt * 6;
+    f.a += Math.sin(f.wob) * dt * 2.5 + rand(-1, 1) * dt * 2;
+    // Steer back into the air zone
+    const margin = 25;
+    if (f.x < margin || f.x > W - margin || f.y < margin || f.y > AIR_BOTTOM) {
+      const toCenter = Math.atan2(H * 0.35 - f.y, W / 2 - f.x);
+      let diff = toCenter - f.a;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      f.a += diff * Math.min(1, dt * 4);
+    }
+    f.x += Math.cos(f.a) * f.speed * dt;
+    f.y += Math.sin(f.a) * f.speed * dt;
+  });
+
+  nextFood -= dt;
+  if (nextFood <= 0) { foods.push(makeFood()); nextFood = rand(6, 10); }
+  foods.forEach(o => { if (!o.caught) { o.y += o.vy * dt; o.rot += o.spin * dt; } });
+  foods = foods.filter(o => o.caught || o.y < AIR_BOTTOM + 60);
+
+  if (elapsed > 10) {
+    nextBee -= dt;
+    if (nextBee <= 0) { bees.push(makeBee()); nextBee = rand(7, 12); }
+  }
+  bees.forEach(b => {
+    if (b.caught) return;
+    b.wob += dt * 5;
+    b.x += b.dir * b.speed * dt;
+    b.y += Math.sin(b.wob) * 40 * dt;
+  });
+  bees = bees.filter(b => b.caught || (b.x > -40 && b.x < W + 40));
+
+  // Tongue: shoot out to the target, then reel back in (carrying the prey)
+  if (tongue) {
+    tongue.t += dt;
+    const OUT = 0.08, IN = 0.15;
+    if (tongue.phase === 'out' && tongue.t >= OUT) { tongue.phase = 'in'; tongue.t = 0; }
+    if (tongue.phase === 'in') {
+      const k = Math.min(1, tongue.t / IN);
+      tongue.tipX = tongue.x + (MOUTH.x - tongue.x) * k;
+      tongue.tipY = tongue.y + (MOUTH.y - tongue.y) * k;
+      if (tongue.prey) { tongue.prey.x = tongue.tipX; tongue.prey.y = tongue.tipY; }
+      if (k >= 1) {
+        const prey = tongue.prey;
+        tongue = null;
+        if (prey) {
+          flies = flies.filter(f => f !== prey);
+          foods = foods.filter(f => f !== prey);
+          bees = bees.filter(b => b !== prey);
+          eat(prey);
+        } else {
+          sound.miss();
+        }
+      }
+    } else {
+      const k = Math.min(1, tongue.t / OUT);
+      tongue.tipX = MOUTH.x + (tongue.x - MOUTH.x) * k;
+      tongue.tipY = MOUTH.y + (tongue.y - MOUTH.y) * k;
+    }
+  }
+
+  popups.forEach(p => { p.t += dt; p.y -= 40 * dt; });
+  popups = popups.filter(p => p.t < 0.9);
+  updateHud();
+}
+
+// ---- Drawing ----
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#1E1652');
+  g.addColorStop(0.65, '#2B3F7A');
+  g.addColorStop(1, '#3E6B2D');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  // A few stars and lily-pad hills
+  ctx.fillStyle = 'rgba(255,248,231,0.5)';
+  [[30, 40], [90, 80], [300, 50], [250, 110], [150, 30], [330, 160], [60, 170]].forEach(([x, y]) => ctx.fillRect(x, y, 2, 2));
+  ctx.fillStyle = '#2F5222';
+  ctx.beginPath(); ctx.ellipse(60, H + 10, 120, 70, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(310, H + 20, 130, 80, 0, 0, Math.PI * 2); ctx.fill();
+}
+function ellipse(x, y, rx, ry, fill, stroke, lw) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.lineWidth = lw || 4; ctx.strokeStyle = stroke; ctx.stroke(); }
+}
+function drawToad(now) {
+  const bob = Math.sin(now / 400) * 2;
+  const INK = '#0F0F1A';
+  const shake = hurt > 0 ? Math.sin(now / 20) * 3 : 0;
+  ctx.save();
+  ctx.translate(shake, bob);
+  ellipse(180, 478, 150, 72, skin[0], INK, 5);          // body
+  ellipse(180, 470, 95, 40, '#F5E6A8', INK, 3);          // belly
+  [[60, 450], [300, 450], [120, 462], [250, 465]].forEach(([x, y]) => ellipse(x, y, 7, 7, skin[1]));
+  [[125, 395], [235, 395]].forEach(([x, y]) => {
+    ellipse(x, y, 42, 38, skin[0], INK, 5);              // eye bump
+    ellipse(x, y - 4, 29, 29, '#F1E93A', INK, 4);        // eyeball
+    // Hypno rings
+    for (let r = 26; r > 4; r -= 5) ellipse(x, y - 4, r, r * 0.55, r % 10 < 5 ? 'rgba(255,90,31,0.55)' : 'rgba(255,176,32,0.55)');
+    // Pupil follows the last tap
+    const ang = Math.atan2(look.y - y, look.x - x);
+    ellipse(x + Math.cos(ang) * 6, y - 4 + Math.sin(ang) * 4, 15, 5.5, INK);
+  });
+  // Mouth: a line, or an O while the tongue is out
+  ctx.lineCap = 'round';
+  if (tongue) ellipse(MOUTH.x, MOUTH.y + 2, 16, 9, '#3D1A1A', INK, 3);
+  else {
+    ctx.beginPath();
+    ctx.moveTo(130, 436); ctx.quadraticCurveTo(180, hurt > 0 ? 448 : 426, 230, 436);
+    ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawTongue() {
+  if (!tongue || tongue.tipX == null) return;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#0F0F1A'; ctx.lineWidth = 12;
+  ctx.beginPath(); ctx.moveTo(MOUTH.x, MOUTH.y); ctx.lineTo(tongue.tipX, tongue.tipY); ctx.stroke();
+  ctx.strokeStyle = '#FF6B7A'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(MOUTH.x, MOUTH.y); ctx.lineTo(tongue.tipX, tongue.tipY); ctx.stroke();
+  ellipse(tongue.tipX, tongue.tipY, 8, 8, '#FF3E8F', '#0F0F1A', 3);
+}
+function emoji(ch, x, y, size, rot, flip) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  if (flip) ctx.scale(-1, 1);
+  ctx.font = size + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ch, 0, 0);
+  ctx.restore();
+}
+function draw(now) {
+  drawBackground();
+  flies.forEach(f => {
+    const flip = Math.cos(f.a) > 0;
+    if (f.kind === 'golden') {
+      ctx.save();
+      ctx.shadowColor = '#FFD23F'; ctx.shadowBlur = 14;
+      emoji('🪰', f.x, f.y, 28, 0, flip);
+      ctx.restore();
+      emoji('✨', f.x + 12, f.y - 12, 14);
+    } else {
+      emoji('🪰', f.x, f.y + Math.sin(now / 60 + f.wob) * 1.5, 26, 0, flip);
+    }
+  });
+  foods.forEach(o => emoji(o.emoji, o.x, o.y, 34, o.rot));
+  bees.forEach(b => emoji('🐝', b.x, b.y, 30, 0, b.dir > 0));
+  drawTongue();
+  drawToad(now);
+  popups.forEach(p => {
+    ctx.globalAlpha = 1 - p.t / 0.9;
+    ctx.font = '22px "Bagel Fat One", cursive';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#0F0F1A';
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ---- Loop ----
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (state === 'play') update(dt);
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+function startGame() {
+  audio(); // unlock sound on this tap
+  reset();
+  state = 'play';
+  document.getElementById('startScreen').hidden = true;
+  document.getElementById('overScreen').hidden = true;
+}
+function endGame() {
+  state = 'over';
+  tongue = null;
+  sound.end();
+  const isBest = score > best;
+  if (isBest) {
+    best = score;
+    try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+    document.getElementById('best').textContent = best;
+  }
+  document.getElementById('overTitle').textContent = isBest && score > 0 ? 'NEW BEST!' : "TIME'S UP!";
+  document.getElementById('overText').innerHTML =
+    'The Toad ate <span class="best">' + score.toLocaleString() + '</span> points of snacks.' +
+    (isBest ? '' : '<br>Your best: ' + best.toLocaleString());
+  document.getElementById('overScreen').hidden = false;
+}
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('againBtn').addEventListener('click', startGame);
+document.addEventListener('keydown', e => {
+  if ((e.code === 'Space' || e.code === 'Enter') && state !== 'play') { e.preventDefault(); startGame(); }
+});
+
+reset();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

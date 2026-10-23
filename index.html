@@ -792,6 +792,26 @@ body.revealed .result-card {
 .toad-hat:empty { display: none; }
 body.king.has-hat .crown { display: none; }
 
+/* Tongue Time easter egg: the fly that buzzes past the toad */
+.buzz-fly {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  padding: 10px;            /* bigger tap target than the fly itself */
+  margin: -10px 0 0 -10px;
+  font-size: clamp(1.4rem, 6vw, 1.9rem);
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.buzz-fly.flying { display: block; }
+.buzz-fly.caught { animation: flyGulp 0.45s ease-in forwards; }
+@keyframes flyGulp { to { transform: translate(var(--gx, 0), var(--gy, 0)) scale(0.2); opacity: 0; } }
+
 /* Unlock celebration: fireworks canvas + message */
 .fireworks {
   position: fixed;
@@ -1294,6 +1314,8 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
     </div>
 
     <div class="food-orbit" id="foodOrbit"></div>
+    <!-- Easter egg: a fly sometimes buzzes past; tap it to play Tongue Time -->
+    <button type="button" class="buzz-fly" id="buzzFly" tabindex="-1" aria-label="A fly! Tap to play Tongue Time">🪰</button>
     <div class="food-final" id="finalFood"></div>
     <div class="sparkles" id="sparkles"></div>
   </div>
@@ -3171,6 +3193,59 @@ document.getElementById('soundCheck').addEventListener('change', e => {
 
 init();
 
+// ---- Tongue Time easter egg ----
+// Every so often a fly buzzes across the toad. Tap it and you're off to
+// tongue-time.html. It never shows while the toad is busy or on special pages.
+(function buzzingFly() {
+  const fly = document.getElementById('buzzFly');
+  const stageEl = document.getElementById('toadStage');
+  if (!fly || !stageEl) return;
+  let raf = 0, timer = 0;
+  const busy = () => ['searching', 'eating', 'indecisive', 'koksed', 'fate'].some(c => document.body.classList.contains(c)) ||
+    document.hidden || document.querySelector('.modal-overlay:not(.hidden), .unlock-toast');
+  function schedule(first) {
+    clearTimeout(timer);
+    timer = setTimeout(launch, first ? 9000 + Math.random() * 6000 : 22000 + Math.random() * 20000);
+  }
+  function launch() {
+    if (busy()) { schedule(); return; }
+    const w = stageEl.clientWidth, hgt = stageEl.clientHeight;
+    const fromLeft = Math.random() < 0.5;
+    const y0 = hgt * (0.1 + Math.random() * 0.5), y1 = hgt * (0.1 + Math.random() * 0.5);
+    const dur = 5200 + Math.random() * 2000, wiggle = 18 + Math.random() * 18, loops = 3 + Math.random() * 3;
+    const start = performance.now();
+    fly.classList.remove('caught');
+    fly.classList.add('flying');
+    fly.style.transform = '';
+    function step(now) {
+      const t = (now - start) / dur;
+      if (t >= 1 || busy()) { fly.classList.remove('flying'); schedule(); return; }
+      const x = fromLeft ? -40 + (w + 80) * t : w + 40 - (w + 80) * t;
+      const y = y0 + (y1 - y0) * t + Math.sin(t * Math.PI * 2 * loops) * wiggle;
+      fly.style.left = x + 'px';
+      fly.style.top = y + 'px';
+      fly.style.transform = (fromLeft ? 'scaleX(-1)' : '') + ' rotate(' + (Math.sin(now / 90) * 12) + 'deg)';
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+  }
+  fly.addEventListener('click', e => {
+    e.stopPropagation();
+    cancelAnimationFrame(raf);
+    clearTimeout(timer);
+    // Gulp: the fly shrinks toward the toad's mouth, then off to the game
+    const mouthX = stageEl.clientWidth * 0.5, mouthY = stageEl.clientHeight * 0.76;
+    fly.style.setProperty('--gx', (mouthX - fly.offsetLeft) + 'px');
+    fly.style.setProperty('--gy', (mouthY - fly.offsetTop) + 'px');
+    fly.style.transform = '';
+    fly.classList.add('caught');
+    try { sfx.munch(); } catch (err) {}
+    setTimeout(() => { location.href = 'tongue-time.html'; }, 700);
+  });
+  window.lunchToadSendFly = launch; // used by the debug panel
+  schedule(true);
+})();
+
 // ---- Debug panel ----
 // Open sonoralunchtoad.com/?debug to show a small toolbox for testing visit
 // rewards, fireworks, the crown, coupons and resets. It stays on in that tab
@@ -3225,6 +3300,8 @@ function showDebugPanel() {
       <div class="row"><span class="lbl">Reset</span>
         <button data-d="resetLook">TOAD LOOK</button><button data-d="resetSpins">SPIN COUNT</button>
         <button data-d="resetKoks">KOKS JOKE</button></div>
+      <div class="row"><span class="lbl">Games</span><button data-d="sendFly">SEND A FLY</button>
+        <a href="tongue-time.html"><button>TONGUE TIME</button></a><a href="toad-road.html"><button>TOAD ROAD</button></a></div>
       <div class="row"><button class="danger" data-d="wipe">WIPE ALL SITE DATA</button>
         <button data-d="dump">SHOW SAVED DATA</button></div>
       <pre data-v="dump" hidden></pre>
@@ -3294,6 +3371,7 @@ function showDebugPanel() {
       saveFilters();
     },
     resetSpins() { setSpins(0); },
+    sendFly() { if (window.lunchToadSendFly) window.lunchToadSendFly(); },
     resetKoks() { deleteCookie(KOKS_COOKIE); },
     wipe() {
       if (!confirm('Wipe ALL Lunch Toad data in this browser (visits, rewards, crown, coupons, saved filters)?')) return;
