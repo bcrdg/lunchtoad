@@ -195,7 +195,7 @@ canvas { display: block; }
       <h2>TOAD ROAD</h2>
       <p>Six levels across Tuolumne County: Washington Street, Old Town Columbia,
          a restaurant kitchen, an old mine shaft, New Melones Lake and Dodge Ridge.
-         Fill all five spots at the top to clear a level.</p>
+         Make it across twice to clear a level.</p>
       <button class="btn" id="startBtn">START</button>
       <div class="board-wrap">
         <div class="board-title">🏆 TOP TOADS</div>
@@ -242,7 +242,7 @@ canvas { display: block; }
 // Toad Road: a Frogger-style easter egg set around Tuolumne County.
 //
 // Every level uses the same 11 x 13 grid:
-//   row 0      goal (five spots to fill)
+//   row 0      goal (five spots; fill CROSSINGS_PER_LEVEL of them)
 //   rows 1-5   "ride" section: stand on moving platforms or you're done
 //   row 6      safe strip
 //   row 7      "burst" lane: one long fast hazard with a warning light
@@ -253,6 +253,7 @@ canvas { display: block; }
 // ---------------------------------------------------------------------------
 const COLS = 11, ROWS = 13;
 const GOAL_COLS = [1, 3, 5, 7, 9];
+const CROSSINGS_PER_LEVEL = 2; // reach the top this many times to clear a level
 const TIME_PER_LIFE = 45;
 const START_LIVES = 5;
 const BEST_KEY = 'lt_toadroad_best';
@@ -537,7 +538,7 @@ function reachGoal() {
   filled[i] = true;
   score += 50 + Math.floor(timeLeft) * 2;
   resetToad();
-  if (filled.every(Boolean)) {
+  if (filled.filter(Boolean).length >= CROSSINGS_PER_LEVEL) {
     score += 1000;
     level += 1;
     filled = GOAL_COLS.map(() => false);
