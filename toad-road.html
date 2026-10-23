@@ -178,6 +178,23 @@ canvas { display: block; }
 .board li .lvl { opacity: 0.6; font-weight: 500; }
 .board li.me { color: var(--yellow); }
 .board li.board-empty { display: block; text-align: center; opacity: 0.7; font-weight: 500; }
+/* #1 on the board: gold row with a crown and a slow shimmer */
+.board li.first {
+  color: var(--ink);
+  font-weight: 700;
+  background: linear-gradient(100deg, #E09A00 0%, #FFD23F 35%, #FFF3B0 50%, #FFD23F 65%, #E09A00 100%);
+  background-size: 250% 100%;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin: 0 -6px 3px;
+  box-shadow: 0 0 10px rgba(255, 210, 63, 0.55);
+  animation: goldShimmer 3.5s linear infinite;
+}
+.board li.first span:first-child { font-size: 1.05em; }
+.board li.first .lvl { opacity: 0.75; }
+.board li.first.me { outline: 2px solid var(--hot-pink); }
+@keyframes goldShimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+@media (prefers-reduced-motion: reduce) { .board li.first { animation: none; } }
 .initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
 .initials-row { display: flex; gap: 8px; }
 .initials input {
@@ -742,8 +759,9 @@ function renderBoard(el, board, highlight) {
   }
   board.forEach((e, i) => {
     const li = document.createElement('li');
-    if (highlight && e === highlight) li.className = 'me';
-    [String(i + 1) + '.', e.name, e.score.toLocaleString(), 'L' + e.level].forEach((t, k) => {
+    if (highlight && e === highlight) li.classList.add('me');
+    if (i === 0) li.classList.add('first');
+    [i === 0 ? '👑' : String(i + 1) + '.', e.name, e.score.toLocaleString(), 'L' + e.level].forEach((t, k) => {
       const span = document.createElement('span');
       if (k === 3) span.className = 'lvl';
       span.textContent = t;

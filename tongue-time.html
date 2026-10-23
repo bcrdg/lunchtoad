@@ -130,10 +130,40 @@ canvas { display: block; width: 100%; height: auto; }
 }
 .board-title { font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 1.5px; color: var(--yellow); font-size: 0.9rem; }
 .board { list-style: none; font-size: 0.85rem; font-weight: 600; margin-top: 4px; text-align: left; }
-.board li { display: grid; grid-template-columns: 1.6em minmax(6.5em, 1fr) auto; gap: 8px; padding: 1px 0; }
+.board li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto; gap: 8px; padding: 1px 0; }
+.board li span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board li span:nth-child(3) { text-align: right; }
 .board li.me { color: var(--yellow); }
 .board li.board-empty { display: block; text-align: center; opacity: 0.7; font-weight: 500; }
+/* More than 10 scores: two columns side by side (1-10 left, 11-20 right) so it fits without scrolling */
+.board-wrap.wide { width: 100%; max-width: 440px; padding: 8px 10px; }
+.overlay:has(.board-wrap.wide) { padding-left: 10px; padding-right: 10px; }
+.board.two-col {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(10, auto);
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+  font-size: 0.8rem;
+}
+.board.two-col li { gap: 5px; grid-template-columns: 1.9em minmax(0, 1fr) auto; }
+/* #1 on the board: gold row with a crown and a slow shimmer */
+.board li.first {
+  color: var(--ink);
+  font-weight: 700;
+  background: linear-gradient(100deg, #E09A00 0%, #FFD23F 35%, #FFF3B0 50%, #FFD23F 65%, #E09A00 100%);
+  background-size: 250% 100%;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin: 0 -6px 3px;
+  box-shadow: 0 0 10px rgba(255, 210, 63, 0.55);
+  animation: goldShimmer 3.5s linear infinite;
+}
+.board li.first span:first-child { font-size: 1.05em; }
+.board li.first .lvl { opacity: 0.75; }
+.board li.first.me { outline: 2px solid var(--hot-pink); }
+@keyframes goldShimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+@media (prefers-reduced-motion: reduce) { .board li.first { animation: none; } }
 .initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
 .initials[hidden] { display: none; }
 .initials-row { display: flex; gap: 8px; }
@@ -625,16 +655,21 @@ function qualifies(board, s) {
 }
 function renderBoard(el, board, highlight) {
   el.innerHTML = '';
+  const twoCol = board.length > 10;
+  el.classList.toggle('two-col', twoCol);
+  if (el.parentElement) el.parentElement.classList.toggle('wide', twoCol);
   if (!board.length) {
     el.innerHTML = '<li class="board-empty">No scores yet. Be the first tongue!</li>';
     return;
   }
   board.forEach((e, i) => {
     const li = document.createElement('li');
-    if (highlight && e.name === highlight.name && e.score === highlight.score && e.date === highlight.date) li.className = 'me';
-    [(i + 1) + '.', e.name, e.score.toLocaleString()].forEach(t => {
+    if (highlight && e.name === highlight.name && e.score === highlight.score && e.date === highlight.date) li.classList.add('me');
+    if (i === 0) li.classList.add('first');
+    [i === 0 ? '👑' : (i + 1) + '.', e.name, e.score.toLocaleString()].forEach((t, k) => {
       const span = document.createElement('span');
       span.textContent = t;
+      if (k === 1) span.title = t; // full name on hover when it's trimmed with "…"
       li.appendChild(span);
     });
     el.appendChild(li);
