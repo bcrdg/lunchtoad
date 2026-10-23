@@ -3,6 +3,11 @@
 // coffee = coffee/juice/smoothie/boba spots (no alcohol); drinks = alcohol (bars, breweries, wine).
 // Researched Oct 2026 (address/phone/website from listings + business sites). To add or remove a place, edit a line here and push.
 
+// Coupons: add  coupon: { img: "img/coupons/<file>.png", offer: "$1 off any burrito", until: "2026-12-31" }
+// to a line (until = last day of the offer, optional). Put the image in img/coupons/.
+// It pops up when the toad picks that place and is saved on the device for 24 hours.
+// Call the restaurant back on its listed number to confirm any coupon request first.
+
 // Locally owned — shown by default.
 //
 // Restaurant recommendations: when a restaurant tells us what to order, add a `rec`

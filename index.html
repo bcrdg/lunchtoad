@@ -642,6 +642,91 @@ body.revealed .result-card {
   border-color: var(--yellow);
   background: rgba(255, 210, 63, 0.1);
 }
+/* Coupons */
+.controls-row.hidden { display: none; }
+.coupon-btn { font-size: 0.95rem; }
+.coupon-body { padding: 16px 18px 20px; overflow-y: auto; text-align: center; }
+.coupon-place {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.coupon-offer { font-weight: 600; margin-bottom: 10px; }
+.coupon-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 3px solid var(--ink);
+  background: #fff;
+}
+.coupon-test {
+  display: inline-block;
+  font-family: 'Bagel Fat One', cursive;
+  letter-spacing: 1px;
+  background: var(--hot-pink);
+  color: var(--cream);
+  border-radius: 8px;
+  padding: 2px 10px;
+  margin-bottom: 8px;
+}
+/* Live strip: ticking clock + bouncing toad, so staff can tell a live screen from a screenshot */
+.coupon-live {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  background: var(--ink);
+  color: var(--cream);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.coupon-live .hop { display: inline-block; animation: couponHop 0.8s ease-in-out infinite; font-size: 1.4rem; }
+@keyframes couponHop {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50% { transform: translateY(-7px) rotate(8deg); }
+}
+.coupon-live b { color: var(--yellow); }
+.coupon-note { font-size: 0.85rem; opacity: 0.75; margin-top: 10px; line-height: 1.4; }
+.coupon-actions { margin-top: 14px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.coupon-actions button {
+  font-family: 'Bagel Fat One', cursive;
+  letter-spacing: 1px;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 50px;
+  padding: 8px 18px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.coupon-list { list-style: none; text-align: left; }
+.coupon-list li + li { margin-top: 10px; }
+.coupon-list button {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 210, 63, 0.18);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  padding: 8px;
+  cursor: pointer;
+}
+.coupon-list img { width: 96px; height: auto; border-radius: 8px; border: 2px solid var(--ink); }
+.coupon-list strong { display: block; font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 0.5px; }
+.coupon-list small { display: block; font-weight: 600; opacity: 0.75; font-variant-numeric: tabular-nums; }
+
 /* Secret features (unlocked after 10 visits) */
 .secret-features {
   margin: 20px auto 0;
@@ -1288,6 +1373,13 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
       </label>
     </div>
 
+    <!-- Shown only while this device has an unexpired coupon -->
+    <div class="controls-row hidden" id="myCouponsRow">
+      <button type="button" class="picky-toggle coupon-btn" id="myCouponsBtn">
+        🎟 SEE MY COUPONS (<span id="couponCount">0</span>)
+      </button>
+    </div>
+
     <!-- Unlocked after 10 visits (see UNLOCKS in the script) -->
     <div class="secret-features hidden" id="secretFeatures">
       <div class="secret-title">🔓 SECRET FEATURES</div>
@@ -1313,6 +1405,16 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
     </button>
 
     <a class="disclaimer-link" href="disclaimer.html">📜 Disclaimer &amp; fine print</a>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="couponOverlay">
+  <div class="modal coupon-modal" role="dialog" aria-labelledby="couponTitle">
+    <div class="modal-header">
+      <h2 id="couponTitle">🎟 COUPON!</h2>
+      <button class="modal-close" id="couponClose" aria-label="Close">✕</button>
+    </div>
+    <div class="coupon-body" id="couponBody"></div>
   </div>
 </div>
 
@@ -1610,6 +1712,187 @@ document.getElementById('contactBtn').addEventListener('click', () => {
   contactStatus.textContent = '';
   contactOverlay.classList.remove('hidden');
 });
+// ---- Coupons ----
+// A restaurant gets a coupon by adding to its line in restaurants.js:
+//   coupon: { img: "img/coupons/pizza-plus.png", offer: "$1 off any slice", until: "2026-12-31" }
+// (`until` is optional: the last day the restaurant is running the offer.)
+// When the toad picks that restaurant, the coupon pops up and is saved on this
+// device under "See my coupons" in Lunch Options. Each saved coupon expires
+// 24 hours after it first popped up. Nothing is sent anywhere.
+// Testing: open the site with ?coupontest and every pick in that tab gets the
+// sample coupon (clearly marked TEST, not a real offer).
+const COUPONS_KEY = 'lt_coupons';
+const COUPON_LIFE_MS = 24 * 60 * 60 * 1000;
+const SAMPLE_COUPON = { img: 'img/coupons/sample.png', offer: 'Sample coupon: not a real offer', test: true };
+let couponTest = false;
+try {
+  if (new URLSearchParams(location.search).has('coupontest')) sessionStorage.setItem('lt_coupon_test', '1');
+  couponTest = sessionStorage.getItem('lt_coupon_test') === '1';
+} catch (e) {}
+
+function activeCoupons() {
+  let list = [];
+  try { list = JSON.parse(storageGet(COUPONS_KEY) || '[]'); } catch (e) {}
+  if (!Array.isArray(list)) list = [];
+  const now = Date.now();
+  const live = list.filter(c => c && typeof c.img === 'string' && typeof c.got === 'number' &&
+                                c.got <= now + 60000 && now < c.got + COUPON_LIFE_MS);
+  if (live.length !== list.length) storageSet(COUPONS_KEY, JSON.stringify(live));
+  return live;
+}
+function todayPacific() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD
+}
+function couponFor(r) {
+  const c = r.coupon;
+  if (c && c.img && (!c.until || todayPacific() <= c.until)) return c;
+  return couponTest ? SAMPLE_COUPON : null;
+}
+// Saves the pick's coupon (if it has one) and returns the saved entry.
+// Getting the same coupon again doesn't restart its 24 hours.
+function grantCoupon(r) {
+  const c = couponFor(r);
+  if (!c) return null;
+  const list = activeCoupons();
+  let entry = list.find(x => x.restaurant === r.name && x.img === c.img);
+  if (!entry) {
+    entry = { restaurant: r.name, img: c.img, offer: c.offer || '', got: Date.now(), test: !!c.test };
+    list.push(entry);
+    storageSet(COUPONS_KEY, JSON.stringify(list));
+  }
+  updateCouponButton();
+  return entry;
+}
+function updateCouponButton() {
+  const n = activeCoupons().length;
+  document.getElementById('couponCount').textContent = n;
+  document.getElementById('myCouponsRow').classList.toggle('hidden', n === 0);
+}
+
+function timeLeft(c) {
+  const ms = Math.max(0, c.got + COUPON_LIFE_MS - Date.now());
+  const s = Math.floor(ms / 1000);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+}
+const couponOverlay = document.getElementById('couponOverlay');
+const couponBody = document.getElementById('couponBody');
+let couponTimer = null, couponView = null;
+
+function couponEl(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function showCoupon(c, fresh) {
+  couponView = { type: 'one', coupon: c };
+  document.getElementById('couponTitle').textContent = fresh ? '🎟 YOU GOT A COUPON!' : '🎟 COUPON';
+  couponBody.innerHTML = '';
+  if (c.test) couponBody.appendChild(couponEl('div', 'coupon-test', 'TEST · NOT A REAL OFFER'));
+  couponBody.appendChild(couponEl('div', 'coupon-place', c.restaurant));
+  if (c.offer) couponBody.appendChild(couponEl('div', 'coupon-offer', c.offer));
+  const img = couponEl('img', 'coupon-img');
+  img.src = c.img;
+  img.alt = (c.offer || 'Coupon') + ' at ' + c.restaurant;
+  couponBody.appendChild(img);
+  const live = couponEl('div', 'coupon-live');
+  live.appendChild(couponEl('span', 'hop', '🐸'));
+  const left = couponEl('span');
+  left.innerHTML = 'Expires in <b data-left></b>';
+  live.appendChild(left);
+  live.appendChild(couponEl('span', null, '·'));
+  const nowEl = couponEl('span');
+  nowEl.innerHTML = 'Now <b data-now></b>';
+  live.appendChild(nowEl);
+  couponBody.appendChild(live);
+  couponBody.appendChild(couponEl('p', 'coupon-note',
+    (fresh ? 'Saved to "See my coupons" in Lunch Options for 24 hours. ' : '') +
+    'Show this live screen at the counter. Screenshots don\'t count.'));
+  const actions = couponEl('div', 'coupon-actions');
+  if (activeCoupons().length > 1) {
+    const all = couponEl('button', null, '🎟 ALL MY COUPONS');
+    all.type = 'button';
+    all.addEventListener('click', showCouponList);
+    actions.appendChild(all);
+  }
+  const done = couponEl('button', null, 'GOT IT');
+  done.type = 'button';
+  done.addEventListener('click', closeCoupon);
+  actions.appendChild(done);
+  couponBody.appendChild(actions);
+  openCouponOverlay();
+}
+function showCouponList() {
+  couponView = { type: 'list' };
+  const list = activeCoupons().sort((a, b) => a.got - b.got);
+  document.getElementById('couponTitle').textContent = '🎟 MY COUPONS';
+  couponBody.innerHTML = '';
+  if (!list.length) {
+    couponBody.appendChild(couponEl('p', 'coupon-offer', 'No coupons right now. Keep spinning, the Toad is generous.'));
+  } else {
+    const ul = couponEl('ul', 'coupon-list');
+    list.forEach(c => {
+      const li = couponEl('li');
+      const b = couponEl('button');
+      b.type = 'button';
+      const img = couponEl('img');
+      img.src = c.img;
+      img.alt = '';
+      const text = couponEl('span');
+      text.appendChild(couponEl('strong', null, c.restaurant + (c.test ? ' (TEST)' : '')));
+      if (c.offer) text.appendChild(couponEl('span', null, c.offer));
+      const small = couponEl('small');
+      small.innerHTML = 'Expires in <span data-left-for="' + c.got + '"></span>';
+      text.appendChild(small);
+      b.appendChild(img);
+      b.appendChild(text);
+      b.addEventListener('click', () => showCoupon(c, false));
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    couponBody.appendChild(ul);
+  }
+  openCouponOverlay();
+}
+function tickCoupon() {
+  if (!couponView) return;
+  const list = activeCoupons();
+  if (couponView.type === 'one') {
+    const c = couponView.coupon;
+    if (!list.some(x => x.got === c.got && x.img === c.img)) { showCouponList(); updateCouponButton(); return; }
+    const left = couponBody.querySelector('[data-left]');
+    const now = couponBody.querySelector('[data-now]');
+    if (left) left.textContent = timeLeft(c);
+    if (now) now.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  } else {
+    const rows = couponBody.querySelectorAll('[data-left-for]');
+    if (rows.length !== list.length) { showCouponList(); updateCouponButton(); return; } // one expired: redraw
+    rows.forEach(el => {
+      const c = list.find(x => String(x.got) === el.dataset.leftFor);
+      el.textContent = c ? timeLeft(c) : 'expired';
+    });
+  }
+}
+function openCouponOverlay() {
+  couponOverlay.classList.remove('hidden');
+  tickCoupon();
+  clearInterval(couponTimer);
+  couponTimer = setInterval(tickCoupon, 1000);
+}
+function closeCoupon() {
+  couponOverlay.classList.add('hidden');
+  clearInterval(couponTimer);
+  couponView = null;
+  updateCouponButton();
+}
+document.getElementById('couponClose').addEventListener('click', closeCoupon);
+couponOverlay.addEventListener('click', e => { if (e.target === couponOverlay) closeCoupon(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !couponOverlay.classList.contains('hidden')) closeCoupon();
+});
+document.getElementById('myCouponsBtn').addEventListener('click', showCouponList);
+
 document.getElementById('contactClose').addEventListener('click', closeContact);
 contactOverlay.addEventListener('click', e => {
   if (e.target === contactOverlay) closeContact();
@@ -2262,6 +2545,7 @@ function reveal() {
   currentPick = chosen;
   document.getElementById('sharePickStatus').textContent = '';
   showRecommendation(chosen);
+  const coupon = grantCoupon(chosen);
 
   burstSparkles();
 
@@ -2269,6 +2553,7 @@ function reveal() {
     document.body.classList.remove('eating');
     lunchBtn.disabled = false;
     lunchBtn.textContent = 'AGAIN, TOAD';
+    if (coupon) showCoupon(coupon, true);
   }, 1700);
 }
 
@@ -2674,6 +2959,7 @@ function init() {
   document.getElementById('chainCheck').checked = includeChains;
   document.getElementById('soundCheck').checked = soundOn;
   updateCount();
+  updateCouponButton();
   applyUnlocks();
 
   // Links like sonoralunchtoad.com/#contact (used by disclaimer.html) open the contact form.
