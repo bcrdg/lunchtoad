@@ -306,7 +306,7 @@ const LOCAL_RESTAURANTS = [
     address: "395 S Washington St, Sonora, CA 95370",
     phone: "(209) 532-3552",
     website: "https://dayoespresso.com/" },
-  { name: "Sonora Creamery", cuisine: "dessert", town: "sonora",
+  { name: "Sonora Creamery", cuisine: "sandwich", town: "sonora",
     meals: ["lunch","sweets"],
     address: "14888 Peaceful Valley Rd, Sonora, CA 95370",
     phone: "(209) 396-2909",
