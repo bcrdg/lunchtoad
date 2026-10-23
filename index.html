@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lunch Toad — Sonora Edition</title>
+<title>Sonora Lunch Toad</title>
+<meta name="description" content="Can't decide where to eat? The Lunch Toad picks a random restaurant in Sonora, Jamestown, Columbia, Twain Harte, Mi-Wuk and Tuolumne.">
+<meta property="og:title" content="Sonora Lunch Toad">
+<meta property="og:description" content="Can't decide where to eat? Let the Lunch Toad decide.">
+<meta property="og:url" content="https://sonoralunchtoad.com/">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://sonoralunchtoad.com/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -393,7 +400,7 @@ body.revealed .result-card {
   flex-wrap: wrap;
 }
 
-.picky-toggle, .menu-btn {
+.picky-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -410,8 +417,8 @@ body.revealed .result-card {
   user-select: none;
   transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
 }
-.picky-toggle:hover, .menu-btn:hover { background: var(--yellow); }
-.picky-toggle:active, .menu-btn:active {
+.picky-toggle:hover { background: var(--yellow); }
+.picky-toggle:active {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 var(--ink);
 }
@@ -553,124 +560,124 @@ body.revealed .result-card {
 }
 .modal-close:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
 
-.add-form {
-  padding: 14px 16px;
-  border-bottom: 2px dashed var(--ink);
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  background: rgba(255, 210, 63, 0.15);
-}
-.add-form input,
-.add-form select {
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  padding: 8px 12px;
-  border: 3px solid var(--ink);
-  border-radius: 12px;
-  background: white;
-  color: var(--ink);
-}
-.add-form input { flex: 1; min-width: 140px; }
-.add-form select { min-width: 130px; }
-.add-form button {
-  font-family: 'Bagel Fat One', cursive;
-  font-size: 0.95rem;
-  letter-spacing: 1.5px;
-  padding: 8px 16px;
-  background: var(--toad-green);
+/* LUNCH OPTIONS (small, afterthought-style toggle) */
+.options-toggle {
+  margin-top: 14px;
+  background: none;
+  border: none;
   color: var(--cream);
-  -webkit-text-stroke: 1px var(--ink);
+  opacity: 0.55;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.options-toggle:hover, .options-toggle:focus-visible { opacity: 1; }
+.options-toggle .caret { display: inline-block; transition: transform 0.2s; }
+.options-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+
+.options-panel {
+  margin: 10px auto 0;
+  max-width: 500px;
+  animation: filtersIn 0.3s ease;
+}
+.options-panel.hidden { display: none; }
+
+.options-label {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  color: var(--yellow);
+  margin-bottom: 8px;
+}
+
+.town-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.town-pill .town-count { opacity: 0.6; font-size: 0.75rem; }
+
+.contact-btn {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: rgba(255, 248, 231, 0.06);
+  border: 2px dashed rgba(255, 248, 231, 0.3);
+  border-radius: 16px;
+  color: var(--cream);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.contact-btn strong { color: var(--yellow); }
+.contact-btn:hover {
+  border-color: var(--yellow);
+  background: rgba(255, 210, 63, 0.1);
+}
+
+.contact-form {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.contact-intro { font-weight: 500; font-size: 0.95rem; }
+.contact-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.contact-form input,
+.contact-form select,
+.contact-form textarea {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 8px 12px;
   border: 3px solid var(--ink);
   border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 3px 3px 0 var(--ink);
-}
-.add-form button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
-
-.restaurant-list {
-  overflow-y: auto;
-  padding: 8px 12px;
-  flex: 1;
-  background: white;
-}
-.restaurant-list::-webkit-scrollbar { width: 10px; }
-.restaurant-list::-webkit-scrollbar-track { background: rgba(15, 15, 26, 0.05); }
-.restaurant-list::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 5px; }
-
-.restaurant-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 4px;
-  border-bottom: 1px solid rgba(15, 15, 26, 0.1);
-}
-.restaurant-row:last-child { border-bottom: none; }
-.restaurant-row .row-name {
-  flex: 1;
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  padding: 6px 10px;
-  border: 2px solid rgba(15, 15, 26, 0.2);
-  border-radius: 8px;
   background: white;
   color: var(--ink);
-  min-width: 100px;
+  width: 100%;
 }
-.restaurant-row .row-name:focus {
-  outline: none;
-  border-color: var(--ink);
-}
-.restaurant-row .row-cuisine {
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 6px 8px;
-  border: 2px solid rgba(15, 15, 26, 0.2);
-  border-radius: 8px;
-  background: white;
-  color: var(--ink);
-  cursor: pointer;
-}
-.restaurant-row .row-delete {
+.contact-form textarea { resize: vertical; }
+.contact-submit {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  padding: 10px 16px;
   background: var(--hot-pink);
   color: var(--cream);
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  flex-shrink: 0;
-}
-.restaurant-row .row-delete:active { transform: scale(0.95); }
-
-.modal-footer {
-  padding: 12px 16px;
-  border-top: 3px solid var(--ink);
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  background: rgba(15, 15, 26, 0.05);
-}
-.modal-footer button {
-  font-family: 'Bagel Fat One', cursive;
-  font-size: 0.85rem;
-  letter-spacing: 1.5px;
-  padding: 8px 14px;
+  -webkit-text-stroke: 1px var(--ink);
   border: 3px solid var(--ink);
   border-radius: 12px;
-  cursor: pointer;
   box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
 }
-.btn-reset { background: white; color: var(--ink); }
-.btn-done {
-  background: var(--toad-green);
-  color: var(--cream);
-  -webkit-text-stroke: 1px var(--ink);
+.contact-submit:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.contact-status { font-size: 0.9rem; min-height: 1.2em; }
+
+.restaurant-town {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 2px;
 }
-.modal-footer button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.restaurant-town:empty { display: none; }
 
 /* Cuisine eye color themes */
 body.cuisine-american  { --c1: #DC143C; --c2: #1E40AF; }
@@ -688,9 +695,6 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 @media (max-width: 480px) {
   h1 { letter-spacing: 2px; }
   .tagline { font-size: 0.9rem; }
-  .add-form { flex-direction: column; }
-  .add-form input, .add-form select, .add-form button { width: 100%; }
-  .restaurant-row { flex-wrap: wrap; }
 }
 </style>
 </head>
@@ -767,6 +771,7 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
   <div class="result-card" id="resultCard">
     <div class="cuisine-tag" id="cuisineTag">READY</div>
     <div class="restaurant-name" id="restaurantName">Click below to begin...</div>
+    <div class="restaurant-town" id="restaurantTown"></div>
   </div>
 
   <button class="lunch-btn" id="lunchBtn">FIND MY LUNCH</button>
@@ -777,95 +782,68 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 
   <div class="warning-msg" id="warningMsg">⚠ NOTHING TO PICK FROM, PICKY ⚠</div>
 
-  <div class="controls-row">
-    <label class="picky-toggle">
-      <input type="checkbox" id="pickyCheck">
-      <span>🤨 I'M PICKY</span>
-    </label>
-    <button class="menu-btn" id="manageBtn">🍴 EDIT MENU</button>
-  </div>
+  <button class="options-toggle" id="optionsToggle" aria-expanded="false" aria-controls="optionsPanel">
+    ⚙ lunch options <span class="caret">▾</span>
+  </button>
 
-  <div class="cuisine-filters hidden" id="cuisineFilters"></div>
+  <div class="options-panel hidden" id="optionsPanel">
+    <div class="options-label">WHERE ARE YOU WILLING TO DRIVE?</div>
+    <div class="town-filters" id="townFilters"></div>
+
+    <div class="controls-row">
+      <label class="picky-toggle">
+        <input type="checkbox" id="customFoodCheck">
+        <span>🍽 CUSTOMIZE FOOD TYPE</span>
+      </label>
+    </div>
+
+    <div class="cuisine-filters hidden" id="cuisineFilters"></div>
+
+    <button class="contact-btn" id="contactBtn">
+      Do you own a restaurant and want to tell us what you recommend?
+      Have a restaurant to add? Do you hate our website?
+      <strong>Click here.</strong>
+    </button>
+  </div>
 </div>
 
-<div class="modal-overlay hidden" id="modalOverlay">
+<div class="modal-overlay hidden" id="contactOverlay">
   <div class="modal">
     <div class="modal-header">
-      <h2>THE MENU</h2>
-      <button class="modal-close" id="modalClose">✕</button>
+      <h2>TALK TO THE TOAD</h2>
+      <button class="modal-close" id="contactClose">✕</button>
     </div>
-    <div class="add-form">
-      <input type="text" id="newName" placeholder="Restaurant name..." maxlength="60">
-      <select id="newCuisine"></select>
-      <button id="addBtn">+ ADD</button>
-    </div>
-    <div class="restaurant-list" id="restaurantListEl"></div>
-    <div class="modal-footer">
-      <button class="btn-reset" id="resetBtn">↺ RESET</button>
-      <button class="btn-done" id="doneBtn">DONE</button>
-    </div>
+    <form class="contact-form" id="contactForm">
+      <p class="contact-intro">
+        Restaurant owner with a recommendation? Spot we're missing?
+        Just here to complain? The Toad listens.
+      </p>
+      <label>Your name
+        <input type="text" name="name" maxlength="80">
+      </label>
+      <label>Email (if you want a reply)
+        <input type="email" name="email" maxlength="120">
+      </label>
+      <label>What's up?
+        <select name="topic">
+          <option>I own a restaurant / here's what to order</option>
+          <option>Add a restaurant</option>
+          <option>A restaurant closed or is wrong</option>
+          <option>I hate your website</option>
+          <option>Something else</option>
+        </select>
+      </label>
+      <label>Message
+        <textarea name="message" rows="5" maxlength="2000" required></textarea>
+      </label>
+      <button type="submit" class="contact-submit" id="contactSubmit">SEND IT</button>
+      <p class="contact-status" id="contactStatus" role="status"></p>
+    </form>
   </div>
 </div>
 
+<script src="restaurants.js"></script>
 <script>
-const DEFAULT_RESTAURANTS = [
-  { name: "The Armory", cuisine: "american" },
-  { name: "Diamondback Grill", cuisine: "american" },
-  { name: "Bigwood Brew Works", cuisine: "american" },
-  { name: "Gus's Steakhouse", cuisine: "american" },
-  { name: "The Peppery", cuisine: "american" },
-  { name: "The Standard Pour", cuisine: "american" },
-  { name: "Sonora Squeeze Burger", cuisine: "american" },
-  { name: "Applebee's", cuisine: "american" },
-  { name: "The Outpost", cuisine: "american" },
-  { name: "The Game Room", cuisine: "american" },
-  { name: "Mandy's Breakfast House", cuisine: "breakfast" },
-  { name: "Barrow's Cafe & Grill", cuisine: "breakfast" },
-  { name: "Papa's New Roost", cuisine: "breakfast" },
-  { name: "Willow Wisp Café", cuisine: "breakfast" },
-  { name: "Foothills Cafe", cuisine: "breakfast" },
-  { name: "My Garden Café", cuisine: "breakfast" },
-  { name: "El Arroyo Cantina", cuisine: "mexican" },
-  { name: "Escondite De La Torre", cuisine: "mexican" },
-  { name: "Taqueria Sonora", cuisine: "mexican" },
-  { name: "El Jardín", cuisine: "mexican" },
-  { name: "Cocina Michoacana", cuisine: "mexican" },
-  { name: "Taquería La Esmeralda", cuisine: "mexican" },
-  { name: "Taqueria Barraza", cuisine: "mexican" },
-  { name: "Taco Shop El Rey", cuisine: "mexican" },
-  { name: "Sergio's Taquería", cuisine: "mexican" },
-  { name: "Pinocchio's", cuisine: "italian" },
-  { name: "Emberz Wood-Fired Foodz", cuisine: "italian" },
-  { name: "Mike's Pizza of Sonora", cuisine: "italian" },
-  { name: "Waterwheel Saloon & Pizza", cuisine: "italian" },
-  { name: "Yoshoku", cuisine: "asian" },
-  { name: "Sonora Thai Cuisine", cuisine: "asian" },
-  { name: "B E Wok & Sushi", cuisine: "asian" },
-  { name: "Hong Kong Garden", cuisine: "asian" },
-  { name: "Mandarin House", cuisine: "asian" },
-  { name: "Great Wall Restaurant", cuisine: "asian" },
-  { name: "GK Mongolian BBQ", cuisine: "asian" },
-  { name: "Kobe Japanese Steakhouse", cuisine: "asian" },
-  { name: "Yianni's Grill", cuisine: "greek" },
-  { name: "Mean Lew's BBQ", cuisine: "bbq" },
-  { name: "Mountain Q", cuisine: "bbq" },
-  { name: "The High Country BBQ", cuisine: "bbq" },
-  { name: "Mijo's Oak BBQ", cuisine: "bbq" },
-  { name: "Two Acre Farms", cuisine: "sandwich" },
-  { name: "Pence Farm Sourdough", cuisine: "sandwich" },
-  { name: "West Coast Sourdough", cuisine: "sandwich" },
-  { name: "Bagel Bin", cuisine: "sandwich" },
-  { name: "Goodness Cafe", cuisine: "sandwich" },
-  { name: "Doc's Dawgs", cuisine: "hotdog" },
-  { name: "Nox Sonora", cuisine: "coffee" },
-  { name: "Revive Coffee", cuisine: "coffee" },
-  { name: "Black Bomb Entertainment", cuisine: "coffee" },
-  { name: "Local Collective", cuisine: "coffee" },
-  { name: "The Creamery", cuisine: "dessert" },
-  { name: "It's Yo Good", cuisine: "dessert" },
-  { name: "Simply Delish", cuisine: "dessert" },
-  { name: "The Candy Vault", cuisine: "dessert" },
-];
 
 const cuisineMeta = {
   american:  { emoji: "🍔", label: "BURGER VIBES" },
@@ -891,16 +869,25 @@ const taglines = [
   "The Toad has decided",
 ];
 
-let nextId = 1;
-let restaurants = [];
-let isPicky = false;
+const TOWNS = {
+  sonora:     "Sonora",
+  jamestown:  "Jamestown",
+  columbia:   "Columbia",
+  twainharte: "Twain Harte",
+  miwuk:      "Mi-Wuk",
+  tuolumne:   "Tuolumne",
+};
+const DEFAULT_TOWNS = ['sonora'];
+
+const FORMSPREE_ENDPOINT = ''; // e.g. 'https://formspree.io/f/xxxxxxx' — contact form is inactive until set
+
+const restaurants = DEFAULT_RESTAURANTS.filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town]);
+let customFood = false;
 let activeCuisines = new Set(Object.keys(cuisineMeta));
+let activeTowns = new Set(DEFAULT_TOWNS);
 
-function withIds(list) {
-  return list.map(r => ({ ...r, id: nextId++ }));
-}
-
-// Persistence via the browser's localStorage (per browser/device).
+// Preferences (towns + food types) are remembered in the browser's localStorage,
+// so they stick across visits on the same device. Nothing is sent to a server.
 // Fails silently in private windows or if storage is blocked.
 function storageGet(key) {
   try { return localStorage.getItem(key); } catch (e) { return null; }
@@ -908,58 +895,80 @@ function storageGet(key) {
 function storageSet(key, value) {
   try { localStorage.setItem(key, value); } catch (e) {}
 }
+function storageRemove(key) {
+  try { localStorage.removeItem(key); } catch (e) {}
+}
 
 function loadState() {
-  const r = storageGet('lt_restaurants');
-  restaurants = withIds(DEFAULT_RESTAURANTS);
-  if (r) {
-    try {
-      const data = JSON.parse(r);
-      if (Array.isArray(data) && data.length > 0) {
-        nextId = 1;
-        restaurants = data.map(rt => ({
-          id: nextId++,
-          name: String(rt.name || ''),
-          cuisine: cuisineMeta[rt.cuisine] ? rt.cuisine : 'american'
-        }));
-      }
-    } catch (e) {}
-  }
+  storageRemove('lt_restaurants'); // leftover from the old Edit Menu feature
 
   const f = storageGet('lt_filters');
   if (f) {
     try {
       const data = JSON.parse(f);
-      isPicky = !!data.isPicky;
+      customFood = !!(data.customFood ?? data.isPicky);
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines);
+      }
+      if (Array.isArray(data.towns)) {
+        activeTowns = new Set(data.towns.filter(t => TOWNS[t]));
       }
     } catch (e) {}
   }
 }
 
-function saveRestaurants() {
-  storageSet('lt_restaurants', JSON.stringify(restaurants));
-}
 function saveFilters() {
   storageSet('lt_filters', JSON.stringify({
-    isPicky,
-    cuisines: [...activeCuisines]
+    customFood,
+    cuisines: [...activeCuisines],
+    towns: [...activeTowns],
   }));
 }
 
 function getActiveRestaurants() {
-  const named = restaurants.filter(r => r.name.trim());
-  if (!isPicky) return named;
-  return named.filter(r => activeCuisines.has(r.cuisine));
+  let list = restaurants.filter(r => r.name.trim() && activeTowns.has(r.town));
+  if (customFood) list = list.filter(r => activeCuisines.has(r.cuisine));
+  return list;
 }
 
 function updateCount() {
   const active = getActiveRestaurants();
   document.getElementById('restCount').textContent = active.length;
   const warning = document.getElementById('warningMsg');
+  warning.textContent = activeTowns.size === 0
+    ? '⚠ PICK AT LEAST ONE TOWN ⚠'
+    : '⚠ NOTHING TO PICK FROM, PICKY ⚠';
   warning.classList.toggle('visible', active.length === 0);
   document.getElementById('lunchBtn').disabled = active.length === 0;
+  updateTownCounts();
+}
+
+function buildTownFilters() {
+  const container = document.getElementById('townFilters');
+  container.innerHTML = '';
+  Object.entries(TOWNS).forEach(([key, label]) => {
+    const pill = document.createElement('label');
+    pill.className = 'cuisine-pill town-pill';
+    pill.classList.toggle('active', activeTowns.has(key));
+    pill.innerHTML =
+      `<input type="checkbox" data-town="${key}" ${activeTowns.has(key) ? 'checked' : ''}>` +
+      `<span>${label} <span class="town-count" data-town-count="${key}"></span></span>`;
+    const cb = pill.querySelector('input');
+    cb.addEventListener('change', () => {
+      if (cb.checked) activeTowns.add(key); else activeTowns.delete(key);
+      pill.classList.toggle('active', cb.checked);
+      saveFilters();
+      updateCount();
+    });
+    container.appendChild(pill);
+  });
+}
+
+function updateTownCounts() {
+  document.querySelectorAll('[data-town-count]').forEach(el => {
+    const t = el.dataset.townCount;
+    el.textContent = '(' + restaurants.filter(r => r.town === t && r.name.trim()).length + ')';
+  });
 }
 
 function buildOrbit() {
@@ -1003,90 +1012,60 @@ function buildCuisineFilters() {
   });
 }
 
-function cuisineOptionsHtml(selected) {
-  return Object.entries(cuisineMeta).map(([k, m]) =>
-    `<option value="${k}" ${selected === k ? 'selected' : ''}>${m.emoji} ${m.label}</option>`
-  ).join('');
-}
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-function renderRestaurantList() {
-  const list = document.getElementById('restaurantListEl');
-  list.innerHTML = '';
-  restaurants.forEach(r => {
-    const row = document.createElement('div');
-    row.className = 'restaurant-row';
-    row.dataset.id = r.id;
-    row.innerHTML =
-      `<input type="text" class="row-name" value="${escapeHtml(r.name)}" maxlength="60">` +
-      `<select class="row-cuisine">${cuisineOptionsHtml(r.cuisine)}</select>` +
-      `<button class="row-delete" title="Delete">🗑</button>`;
-    row.querySelector('.row-name').addEventListener('input', e => {
-      r.name = e.target.value;
-    });
-    row.querySelector('.row-cuisine').addEventListener('change', e => {
-      r.cuisine = e.target.value;
-    });
-    row.querySelector('.row-delete').addEventListener('click', () => {
-      restaurants = restaurants.filter(x => x.id !== r.id);
-      renderRestaurantList();
-    });
-    list.appendChild(row);
-  });
-}
-
-const modalOverlay = document.getElementById('modalOverlay');
-document.getElementById('manageBtn').addEventListener('click', () => {
-  document.getElementById('newCuisine').innerHTML = cuisineOptionsHtml('american');
-  document.getElementById('newName').value = '';
-  renderRestaurantList();
-  modalOverlay.classList.remove('hidden');
-});
-function closeModal() {
-  modalOverlay.classList.add('hidden');
-  saveRestaurants();
-  updateCount();
-}
-document.getElementById('modalClose').addEventListener('click', closeModal);
-document.getElementById('doneBtn').addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', e => {
-  if (e.target === modalOverlay) closeModal();
+// Lunch Options panel
+const optionsToggle = document.getElementById('optionsToggle');
+const optionsPanel = document.getElementById('optionsPanel');
+optionsToggle.addEventListener('click', () => {
+  const open = optionsPanel.classList.toggle('hidden') === false;
+  optionsToggle.setAttribute('aria-expanded', String(open));
 });
 
-document.getElementById('addBtn').addEventListener('click', () => {
-  const nameInput = document.getElementById('newName');
-  const cuisineSelect = document.getElementById('newCuisine');
-  const name = nameInput.value.trim();
-  if (!name) {
-    nameInput.focus();
+// Contact modal
+const contactOverlay = document.getElementById('contactOverlay');
+const contactForm = document.getElementById('contactForm');
+const contactStatus = document.getElementById('contactStatus');
+function closeContact() { contactOverlay.classList.add('hidden'); }
+document.getElementById('contactBtn').addEventListener('click', () => {
+  contactStatus.textContent = '';
+  contactOverlay.classList.remove('hidden');
+});
+document.getElementById('contactClose').addEventListener('click', closeContact);
+contactOverlay.addEventListener('click', e => {
+  if (e.target === contactOverlay) closeContact();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!contactOverlay.classList.contains('hidden')) closeContact();
+});
+contactForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!FORMSPREE_ENDPOINT) {
+    contactStatus.textContent = "The Toad's mailbox isn't open yet. Check back soon!";
     return;
   }
-  restaurants.push({ id: nextId++, name, cuisine: cuisineSelect.value });
-  nameInput.value = '';
-  renderRestaurantList();
-  const list = document.getElementById('restaurantListEl');
-  list.scrollTop = list.scrollHeight;
+  const btn = document.getElementById('contactSubmit');
+  btn.disabled = true;
+  contactStatus.textContent = 'Sending...';
+  try {
+    const res = await fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      body: new FormData(contactForm),
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(res.status);
+    contactForm.reset();
+    contactStatus.textContent = 'The Toad has received your message. 🐸';
+  } catch (err) {
+    contactStatus.textContent = 'Something went wrong. Try again in a bit.';
+  } finally {
+    btn.disabled = false;
+  }
 });
 
-document.getElementById('newName').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('addBtn').click();
-});
-
-document.getElementById('resetBtn').addEventListener('click', () => {
-  if (!confirm('Reset to the original Sonora restaurant list? Your edits will be lost.')) return;
-  nextId = 1;
-  restaurants = withIds(DEFAULT_RESTAURANTS);
-  renderRestaurantList();
-});
-
-document.getElementById('pickyCheck').addEventListener('change', e => {
-  isPicky = e.target.checked;
-  document.getElementById('cuisineFilters').classList.toggle('hidden', !isPicky);
+document.getElementById('customFoodCheck').addEventListener('change', e => {
+  customFood = e.target.checked;
+  document.getElementById('cuisineFilters').classList.toggle('hidden', !customFood);
   saveFilters();
   updateCount();
 });
@@ -1107,6 +1086,7 @@ setInterval(() => {
 const lunchBtn = document.getElementById('lunchBtn');
 const nameDisplay = document.getElementById('restaurantName');
 const cuisineTag = document.getElementById('cuisineTag');
+const townDisplay = document.getElementById('restaurantTown');
 const finalFood = document.getElementById('finalFood');
 const sparklesEl = document.getElementById('sparkles');
 
@@ -1135,6 +1115,7 @@ function startSearch() {
   lunchBtn.disabled = true;
   lunchBtn.textContent = 'CONSULTING...';
   cuisineTag.textContent = '...';
+  townDisplay.textContent = '';
 
   cycleInterval = setInterval(() => {
     const r = active[Math.floor(Math.random() * active.length)];
@@ -1160,6 +1141,7 @@ function reveal() {
   finalFood.textContent = meta.emoji;
   nameDisplay.textContent = chosen.name;
   cuisineTag.textContent = meta.label;
+  townDisplay.textContent = activeTowns.size > 1 ? '📍 ' + TOWNS[chosen.town] : '';
 
   burstSparkles();
 
@@ -1196,8 +1178,9 @@ function init() {
   loadState();
   buildOrbit();
   buildCuisineFilters();
-  document.getElementById('pickyCheck').checked = isPicky;
-  document.getElementById('cuisineFilters').classList.toggle('hidden', !isPicky);
+  buildTownFilters();
+  document.getElementById('customFoodCheck').checked = customFood;
+  document.getElementById('cuisineFilters').classList.toggle('hidden', !customFood);
   updateCount();
 }
 init();
