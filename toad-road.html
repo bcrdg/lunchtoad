@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Toad Road — Sonora Lunch Toad</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0F0F1A;
+  --bg: #1B1147;
+  --bg-deep: #0A0820;
+  --toad-green: #5A8C3F;
+  --toad-dark: #3E6B2D;
+  --hot-pink: #FF3E8F;
+  --yellow: #FFD23F;
+  --cream: #FFF8E7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overscroll-behavior: none; }
+body {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  background-color: var(--bg-deep);
+  background-attachment: fixed;
+  color: var(--cream);
+  min-height: 100vh;
+  padding: 14px 12px 24px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+main { max-width: 560px; margin: 0 auto; text-align: center; }
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink), 4px 4px 0 var(--hot-pink), 8px 8px 0 var(--ink);
+  letter-spacing: 2px;
+  transform: rotate(-2deg);
+}
+.sub { font-style: italic; font-weight: 500; opacity: 0.85; margin: 4px 0 10px; font-size: 0.9rem; min-height: 1.3em; }
+.hud {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  letter-spacing: 1px;
+  font-size: 0.95rem;
+  margin: 0 auto 6px;
+}
+.hud span b { color: var(--yellow); font-weight: 400; }
+.stage {
+  position: relative;
+  margin: 0 auto;
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 var(--ink);
+  touch-action: none;
+}
+canvas { display: block; }
+.timer {
+  height: 8px;
+  background: rgba(255, 248, 231, 0.15);
+  border-radius: 4px;
+  margin: 8px auto 0;
+  overflow: hidden;
+}
+.timer div { height: 100%; background: var(--yellow); width: 100%; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 32, 0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  text-align: center;
+}
+.overlay[hidden] { display: none; }
+.overlay.banner { background: rgba(10, 8, 32, 0.6); pointer-events: none; }
+.overlay h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 7vw, 2.2rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 2px var(--ink);
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.overlay .kicker { font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 2px; color: var(--hot-pink); }
+.overlay p { font-weight: 500; line-height: 1.4; max-width: 340px; }
+.btn {
+  font-family: 'Bagel Fat One', cursive;
+  font-weight: 400;
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+  color: var(--cream);
+  -webkit-text-stroke: 1px var(--ink);
+  background: var(--hot-pink);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 26px;
+  box-shadow: 5px 5px 0 var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn.alt { background: var(--yellow); color: var(--ink); -webkit-text-stroke: 0; }
+.btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  grid-template-rows: repeat(2, 52px);
+  gap: 6px;
+  justify-content: center;
+  margin: 14px auto 0;
+}
+.pad button {
+  font-size: 1.5rem;
+  background: var(--cream);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pad button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.pad .up { grid-column: 2; grid-row: 1; }
+.pad .left { grid-column: 1; grid-row: 2; }
+.pad .down { grid-column: 2; grid-row: 2; }
+.pad .right { grid-column: 3; grid-row: 2; }
+.help { font-size: 0.8rem; font-weight: 500; opacity: 0.7; margin-top: 10px; }
+.back { margin-top: 18px; }
+@media (hover: hover) and (pointer: fine) { .pad { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>TOAD ROAD</h1>
+  <p class="sub" id="levelName">"Get the Toad across Tuolumne County."</p>
+
+  <div class="hud" id="hud">
+    <span>SCORE <b id="score">0</b></span>
+    <span>LEVEL <b id="level">1</b></span>
+    <span id="lives">🐸🐸🐸</span>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="game"></canvas>
+    <div class="overlay" id="startScreen">
+      <h2>TOAD ROAD</h2>
+      <p>Six levels across Tuolumne County: Washington Street, Old Town Columbia,
+         a restaurant kitchen, an old mine shaft, New Melones Lake and Dodge Ridge.
+         Fill all five spots at the top to clear a level.</p>
+      <button class="btn" id="startBtn">START</button>
+      <p class="help" id="bestStart"></p>
+    </div>
+    <div class="overlay banner" id="banner" hidden>
+      <div class="kicker" id="bannerKicker">LEVEL 1</div>
+      <h2 id="bannerTitle"></h2>
+      <p id="bannerText"></p>
+    </div>
+    <div class="overlay" id="overScreen" hidden>
+      <h2 id="overTitle">GAME OVER</h2>
+      <p id="overText"></p>
+      <button class="btn" id="againBtn">PLAY AGAIN</button>
+    </div>
+  </div>
+  <div class="timer"><div id="timerBar"></div></div>
+
+  <div class="pad" id="pad">
+    <button class="up" data-dir="up" aria-label="Up">⬆️</button>
+    <button class="left" data-dir="left" aria-label="Left">⬅️</button>
+    <button class="down" data-dir="down" aria-label="Down">⬇️</button>
+    <button class="right" data-dir="right" aria-label="Right">➡️</button>
+  </div>
+  <p class="help">Arrow keys or WASD on a computer · swipe or use the buttons on a phone</p>
+
+  <a class="btn alt back" href="./">🐸 BACK TO TOAD ROAD</a>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// Toad Road: a Frogger-style easter egg set around Tuolumne County.
+//
+// Every level uses the same 11 x 13 grid:
+//   row 0      goal (five spots to fill)
+//   rows 1-5   "ride" section: stand on moving platforms or you're done
+//   row 6      safe strip
+//   row 7      "burst" lane: one long fast hazard with a warning light
+//   rows 8-11  "road" section: dodge everything
+//   row 12     start
+// Levels only change scenery and hazards (LEVELS below). After the sixth level
+// the cycle repeats, faster.
+// ---------------------------------------------------------------------------
+const COLS = 11, ROWS = 13;
+const GOAL_COLS = [1, 3, 5, 7, 9];
+const TIME_PER_LIFE = 30;
+const BEST_KEY = 'lt_toadroad_best';
+
+// Default speeds (tiles/sec, negative = left) and spacing for each section.
+const RIDE_SPEEDS = [1.1, -1.5, 1.8, -1.2, 1.5];
+const ROAD_SPEEDS = [-2.4, 1.9, -1.1, 1.4]; // rows 8, 9, 10, 11
+
+const LEVELS = [
+  {
+    name: 'Washington Street',
+    blurb: 'Downtown Sonora. Dodge the traffic, wait for the train, ride Woods Creek to lunch.',
+    colors: { goal: '#2F5222', ride: '#1E6FB0', safe: '#5A8C3F', burst: '#6B5B4B', road: '#2B2B33', start: '#8C3B2E' },
+    goal: { label: 'Lunch!', items: ['🌮', '🍔', '🍕', '🥪', '🍜'] },
+    ride: { label: 'Woods Creek', bg: 'water', death: 'splash', lanes: [
+      { style: 'log', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🛟', len: 2, gap: 3 },
+      { style: 'log', len: 4, gap: 3 },
+      { style: 'tiles', emoji: '🛟', len: 3, gap: 3 },
+      { style: 'log', len: 2, gap: 3 },
+    ] },
+    safe: { label: 'Courthouse Park', deco: ['🌳', '🏛️'] },
+    burst: { label: 'Sierra Railroad', bg: 'rails', head: '🚂', car: '🚃', len: 8, speed: -10 },
+    road: [
+      { label: 'Hwy 108 logging trucks', style: 'vehicle', head: '🚛', body: '#7A4A23', len: 3, gap: 5 },
+      { label: 'Mono Way', style: 'emoji', emoji: ['🚗', '🚙', '🚕', '🛻'], len: 1, gap: 3 },
+      { label: 'Washington St', style: 'emoji', emoji: ['🚗', '🚐', '🚙', '🛵'], len: 1, gap: 2 },
+      { label: 'Stockton Rd', style: 'emoji', emoji: ['🚗', '🚕', '🚙'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Red Church', deco: ['⛪'] },
+  },
+  {
+    name: 'Old Town Columbia',
+    blurb: 'Gold Rush town. Dodge horses, tourists and the stagecoach, then ride the water flume to the Candy Kitchen.',
+    colors: { goal: '#6B3410', ride: '#3F7FA8', safe: '#8B5A2B', burst: '#C9A26B', road: '#B8875A', start: '#7A4A23' },
+    goal: { label: 'Candy Kitchen', items: ['🍬', '🍭', '🍦', '🍫', '🧁'] },
+    ride: { label: 'Water flume', bg: 'water', death: 'splash', lanes: [
+      { style: 'log', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🛢️', len: 2, gap: 3 },
+      { style: 'plank', body: '#8B5A2B', deco: '⛏️', len: 4, gap: 3 },
+      { style: 'tiles', emoji: '🥘', len: 3, gap: 3 },
+      { style: 'log', len: 2, gap: 3 },
+    ] },
+    safe: { label: 'Boardwalk', deco: ['💰', '🏪'] },
+    burst: { label: 'Stagecoach', bg: 'dirt', head: '🐎', car: 'stage', len: 3, speed: -8 },
+    road: [
+      { label: 'Ox cart', style: 'vehicle', head: '🐂', body: '#8B5A2B', len: 2, gap: 5 },
+      { label: 'Horseback riders', style: 'emoji', emoji: ['🐎', '🏇'], len: 1, gap: 3 },
+      { label: 'Tourists', style: 'emoji', emoji: ['🚶', '🚶‍♀️', '📸', '🧍'], len: 1, gap: 2 },
+      { label: 'Kids on a sugar high', style: 'emoji', emoji: ['🏃', '🏃‍♀️', '🛴'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Main Street', deco: ['🏦'] },
+  },
+  {
+    name: 'Escape the Restaurant',
+    blurb: 'The Toad snuck into the kitchen. Dodge the staff, hop across the dish pit and get out the back door.',
+    colors: { goal: '#3A3A3A', ride: '#7FB7C9', safe: '#B8D8E8', burst: '#B23A3A', road: '#5E5048', start: '#8C3B2E' },
+    goal: { label: 'Back door', items: ['🚪', '🚪', '🚪', '🚪', '🚪'] },
+    ride: { label: 'Dish pit', bg: 'suds', death: 'splash', lanes: [
+      { style: 'tiles', emoji: '🍽️', len: 2, gap: 3 },
+      { style: 'plank', body: '#A8A8A8', deco: '🥖', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🍳', len: 3, gap: 3 },
+      { style: 'plank', body: '#C8A06A', deco: '🔪', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🥣', len: 2, gap: 3 },
+    ] },
+    safe: { label: 'Walk-in cooler', deco: ['🧊', '🥶'] },
+    burst: { label: 'ORDER UP!', bg: 'tile', head: '🧑‍🍳', car: '🍽️', len: 4, speed: -9 },
+    road: [
+      { label: 'Busser carts', style: 'vehicle', head: '🛒', body: '#9AA0A6', len: 2, gap: 4 },
+      { label: 'Waiters', style: 'emoji', emoji: ['🤵', '💁', '🙋'], len: 1, gap: 3 },
+      { label: 'Line cooks', style: 'emoji', emoji: ['🧑‍🍳', '👨‍🍳', '👩‍🍳'], len: 1, gap: 2 },
+      { label: 'Wet floor', style: 'emoji', emoji: ['🧹', '🪣', '🧽'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Table 6', deco: ['🍽️'] },
+  },
+  {
+    name: 'Down the Mine Shaft',
+    blurb: 'The Toad fell down an old gold mine shaft. Climb past the bats and ore carts, cross the timbers and get back to daylight.',
+    colors: { goal: '#87CEEB', ride: '#07070C', safe: '#4A3B2E', burst: '#3B2F25', road: '#2A221C', start: '#1A140F' },
+    goal: { label: 'Daylight', items: ['☀️', '☀️', '☀️', '☀️', '☀️'] },
+    ride: { label: 'Bottomless pit', bg: 'pit', death: 'fall', lanes: [
+      { style: 'plank', body: '#8B5A2B', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🪨', len: 2, gap: 3 },
+      { style: 'plank', body: '#6B4423', deco: '🏮', len: 4, gap: 3 },
+      { style: 'tiles', emoji: '🪵', len: 3, gap: 3 },
+      { style: 'plank', body: '#8B5A2B', len: 2, gap: 3 },
+    ] },
+    safe: { label: 'Lantern ledge', deco: ['🏮', '⛏️'] },
+    burst: { label: 'Runaway ore cart', bg: 'rails', head: '🛒', car: '🪨', len: 4, speed: 9 },
+    road: [
+      { label: 'Bats', style: 'emoji', emoji: ['🦇'], len: 1, gap: 2 },
+      { label: 'Falling rocks', style: 'emoji', emoji: ['🪨'], len: 1, gap: 3 },
+      { label: 'Miners', style: 'emoji', emoji: ['👷', '⛏️'], len: 1, gap: 3 },
+      { label: 'Creepy crawlies', style: 'emoji', emoji: ['🕷️', '🦂', '🐍'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Bottom of the shaft', deco: ['🕳️'] },
+  },
+  {
+    name: 'New Melones Lake',
+    blurb: 'Summer at the lake. Dodge the boat trailers and RVs, then hop houseboats across New Melones to the campsite.',
+    colors: { goal: '#5A8C3F', ride: '#2F7FA8', safe: '#B8956A', burst: '#8A8A8A', road: '#5A5A5A', start: '#B8956A' },
+    goal: { label: 'Campsite', items: ['🏕️', '🌭', '🍉', '🥪', '🍔'] },
+    ride: { label: 'New Melones Lake', bg: 'water', death: 'splash', lanes: [
+      { style: 'plank', body: '#F2F2F2', deco: '🛥️', len: 4, gap: 3 },
+      { style: 'tiles', emoji: '🛟', len: 2, gap: 3 },
+      { style: 'plank', body: '#C0C0C0', deco: '⛵', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🦆', len: 3, gap: 3 },
+      { style: 'log', len: 3, gap: 3 },
+    ] },
+    safe: { label: 'Glory Hole marina dock', deco: ['⚓', '🎣'] },
+    burst: { label: 'Boat ramp', bg: 'concrete', head: '🛻', car: '🚤', len: 3, speed: 7 },
+    road: [
+      { label: 'RVs', style: 'vehicle', head: '🚐', body: '#E8E1D3', len: 3, gap: 5 },
+      { label: 'Parrotts Ferry Rd', style: 'emoji', emoji: ['🚗', '🚙', '🛻'], len: 1, gap: 3 },
+      { label: 'Boat trailers', style: 'vehicle', head: '🛻', body: '#FFFFFF', deco: '🚤', len: 2, gap: 4 },
+      { label: 'Campground', style: 'emoji', emoji: ['🚲', '🏃', '🛴', '🐕'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Parking lot', deco: ['🧺'] },
+  },
+  {
+    name: 'Dodge Ridge',
+    blurb: 'Ski season. Dodge skiers, snowboarders and the snowcat, ride the chairlift over the ravine and get to the lodge for chili.',
+    colors: { goal: '#7A4A23', ride: '#8FA6BC', safe: '#E6F0FA', burst: '#DCE6F0', road: '#F4F8FC', start: '#C9D6E3' },
+    labelColor: 'rgba(15,15,26,0.55)',
+    goal: { label: 'Lodge', items: ['🍲', '☕', '🌭', '🍕', '🥨'] },
+    ride: { label: 'Chairlift', bg: 'ravine', death: 'fall', lanes: [
+      { style: 'tiles', emoji: '🪑', len: 2, gap: 3 },
+      { style: 'tiles', emoji: '🪑', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🪑', len: 2, gap: 2 },
+      { style: 'tiles', emoji: '🪑', len: 3, gap: 3 },
+      { style: 'tiles', emoji: '🪑', len: 2, gap: 3 },
+    ] },
+    safe: { label: 'Mid-mountain', deco: ['🌲', '⛷️'] },
+    burst: { label: 'Snowcat', bg: 'snow', head: '🚜', car: '❄️', len: 3, speed: -6 },
+    road: [
+      { label: 'Black diamond', style: 'emoji', emoji: ['⛷️', '🏂'], len: 1, gap: 3 },
+      { label: 'Snowboarders', style: 'emoji', emoji: ['🏂'], len: 1, gap: 3 },
+      { label: 'Sledders', style: 'emoji', emoji: ['🛷'], len: 1, gap: 2 },
+      { label: 'Bunny hill', style: 'emoji', emoji: ['⛷️', '🧒'], len: 1, gap: 2 },
+    ],
+    start: { label: 'Parking lot', deco: ['🎿'] },
+  },
+];
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const stage = document.getElementById('stage');
+let T = 40; // tile size in CSS px, set by resize()
+
+let state;      // 'start' | 'banner' | 'play' | 'dying' | 'over'
+let L;          // current level definition
+let lanes = [];
+let toad;
+let lives, score, level, filled, timeLeft, bestRow, best;
+let burst;      // { x|null, timer, warn }
+let bannerTimer = 0;
+
+function speedMult() { return 1 + 0.12 * (level - 1); }
+function levelDef(n) { return LEVELS[(n - 1) % LEVELS.length]; }
+
+function makeLane(row, kind, def, speed) {
+  const lane = { ...def, row, kind, speed, items: [] };
+  const step = def.len + def.gap;
+  const count = Math.ceil((COLS + def.len + 2) / step) + 1;
+  lane.span = count * step;
+  const offset = Math.random() * step;
+  for (let i = 0; i < count; i++) {
+    const list = def.emoji;
+    lane.items.push({
+      x: i * step + offset - def.len,
+      emoji: Array.isArray(list) ? list[Math.floor(Math.random() * list.length)] : list,
+    });
+  }
+  return lane;
+}
+
+function buildLevel() {
+  L = levelDef(level);
+  lanes = [];
+  L.ride.lanes.forEach((d, i) => lanes.push(makeLane(1 + i, 'ride', d, RIDE_SPEEDS[i])));
+  L.road.forEach((d, i) => lanes.push(makeLane(8 + i, 'road', d, ROAD_SPEEDS[i])));
+  resetBurst();
+  document.getElementById('levelName').textContent = '"' + L.name + '"';
+}
+
+function resetBurst() {
+  burst = { x: null, timer: 3 + Math.random() * 4, warn: false };
+}
+
+function resetToad() {
+  toad = { col: Math.floor(COLS / 2), row: ROWS - 1, deadTimer: 0, deathKind: '', hop: 0 };
+  bestRow = ROWS - 1;
+  timeLeft = TIME_PER_LIFE;
+}
+
+function showBanner() {
+  document.getElementById('bannerKicker').textContent = 'LEVEL ' + level;
+  document.getElementById('bannerTitle').textContent = L.name;
+  document.getElementById('bannerText').textContent = L.blurb;
+  document.getElementById('banner').hidden = false;
+  bannerTimer = 2.6;
+  state = 'banner';
+}
+
+function newGame() {
+  lives = 3; score = 0; level = 1;
+  filled = GOAL_COLS.map(() => false);
+  buildLevel();
+  resetToad();
+  document.getElementById('startScreen').hidden = true;
+  document.getElementById('overScreen').hidden = true;
+  updateHud();
+  showBanner();
+}
+
+function updateHud() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('level').textContent = level;
+  document.getElementById('lives').textContent = '🐸'.repeat(Math.max(lives, 0)) || '💀';
+}
+
+// ---- input ----
+function isRide(row) { return row >= 1 && row <= 5; }
+
+function move(dir) {
+  if (state === 'banner') { bannerTimer = 0; return; } // tap skips the banner
+  if (state !== 'play') return;
+  if (dir === 'up') toad.row = Math.max(0, toad.row - 1);
+  if (dir === 'down') toad.row = Math.min(ROWS - 1, toad.row + 1);
+  if (dir === 'left') toad.col = Math.max(0, Math.round(toad.col) - 1);
+  if (dir === 'right') toad.col = Math.min(COLS - 1, Math.round(toad.col) + 1);
+  if (!isRide(toad.row)) toad.col = Math.round(toad.col);
+  toad.hop = 0.12;
+  if (toad.row < bestRow) { score += 10; bestRow = toad.row; updateHud(); }
+  if (toad.row === 0) reachGoal();
+}
+
+const KEYS = {
+  ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
+  ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
+};
+document.addEventListener('keydown', e => {
+  const dir = KEYS[e.code];
+  if (dir) { e.preventDefault(); move(dir); }
+  if ((e.code === 'Space' || e.code === 'Enter') && (state === 'start' || state === 'over')) { e.preventDefault(); newGame(); }
+});
+document.querySelectorAll('.pad button').forEach(b => {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); move(b.dataset.dir); });
+});
+let touchStart = null;
+stage.addEventListener('pointerdown', e => { touchStart = { x: e.clientX, y: e.clientY }; });
+stage.addEventListener('pointerup', e => {
+  if (!touchStart) return;
+  const dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+  touchStart = null;
+  if (state !== 'play' && state !== 'banner') return;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) { move('up'); return; }
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+  else move(dy > 0 ? 'down' : 'up');
+});
+document.getElementById('startBtn').addEventListener('click', newGame);
+document.getElementById('againBtn').addEventListener('click', newGame);
+
+// ---- rules ----
+function laneAt(row) { return lanes.find(l => l.row === row); }
+
+function die(kind) {
+  if (state !== 'play') return;
+  state = 'dying';
+  toad.deadTimer = 0.9;
+  toad.deathKind = kind;
+}
+
+function reachGoal() {
+  const i = GOAL_COLS.findIndex(c => Math.abs(toad.col - c) < 0.6);
+  if (i === -1 || filled[i]) { die('bonk'); return; }
+  filled[i] = true;
+  score += 50 + Math.floor(timeLeft) * 2;
+  resetToad();
+  if (filled.every(Boolean)) {
+    score += 1000;
+    level += 1;
+    filled = GOAL_COLS.map(() => false);
+    buildLevel();
+    showBanner();
+  }
+  updateHud();
+}
+
+function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+
+function update(dt) {
+  if (toad.hop > 0) toad.hop -= dt;
+  const mult = speedMult();
+
+  lanes.forEach(l => {
+    l.items.forEach(it => {
+      it.x += l.speed * mult * dt;
+      if (l.speed > 0 && it.x > COLS + 1) it.x -= l.span;
+      if (l.speed < 0 && it.x + l.len < -1) it.x += l.span;
+    });
+  });
+
+  // Burst lane: warning lights, then one long fast hazard.
+  const b = L.burst;
+  if (burst.x === null) {
+    burst.timer -= dt;
+    burst.warn = burst.timer < 1.4;
+    if (burst.timer <= 0) burst.x = b.speed < 0 ? COLS + 1 : -b.len - 1;
+  } else {
+    burst.x += b.speed * mult * dt;
+    if ((b.speed < 0 && burst.x + b.len < -1) || (b.speed > 0 && burst.x > COLS + 1)) resetBurst();
+  }
+
+  if (state === 'banner') {
+    bannerTimer -= dt;
+    if (bannerTimer <= 0) { document.getElementById('banner').hidden = true; state = 'play'; }
+    return;
+  }
+  if (state === 'dying') {
+    toad.deadTimer -= dt;
+    if (toad.deadTimer <= 0) {
+      lives -= 1;
+      updateHud();
+      if (lives <= 0) gameOver(); else { state = 'play'; resetToad(); }
+    }
+    return;
+  }
+  if (state !== 'play') return;
+
+  timeLeft -= dt;
+  if (timeLeft <= 0) { die('time'); return; }
+
+  const t0 = toad.col + 0.18, t1 = toad.col + 0.82;
+  if (toad.row === 7) {
+    if (burst.x !== null && overlaps(t0, t1, burst.x, burst.x + b.len)) die('splat');
+    return;
+  }
+  const lane = laneAt(toad.row);
+  if (!lane) return;
+  if (lane.kind === 'road') {
+    if (lane.items.some(it => overlaps(t0, t1, it.x, it.x + lane.len))) die('splat');
+  } else if (lane.kind === 'ride') {
+    const center = toad.col + 0.5;
+    const ride = lane.items.find(it => center >= it.x && center <= it.x + lane.len);
+    if (!ride) { die(L.ride.death); return; }
+    toad.col += lane.speed * mult * dt;
+    if (toad.col < -0.4 || toad.col > COLS - 0.6) die(L.ride.death);
+  }
+}
+
+function gameOver() {
+  state = 'over';
+  const isBest = score > best;
+  if (isBest) { best = score; try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {} }
+  document.getElementById('overTitle').textContent = isBest && score > 0 ? 'NEW HIGH SCORE!' : 'GAME OVER';
+  document.getElementById('overText').textContent =
+    `Score ${score} · Level ${level} (${L.name}) · Best ${best}. The Toad never made it to lunch.`;
+  document.getElementById('overScreen').hidden = false;
+}
+
+// ---- drawing ----
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+}
+function emoji(ch, cx, cy, size, flip) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (flip) ctx.scale(-1, 1);
+  ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ch, 0, size * 0.05);
+  ctx.restore();
+}
+function label(text, row) {
+  if (!text) return;
+  ctx.save();
+  ctx.font = `600 ${Math.max(9, T * 0.27)}px Fredoka, sans-serif`;
+  ctx.fillStyle = L.labelColor || 'rgba(255,248,231,0.6)';
+  ctx.textBaseline = 'top';
+  ctx.fillText(text.toUpperCase(), 4, row * T + 2);
+  ctx.restore();
+}
+function band(row, rows, color) { ctx.fillStyle = color; ctx.fillRect(0, row * T, COLS * T, rows * T); }
+
+function drawRideBg() {
+  const W = COLS * T, now = performance.now();
+  band(1, 5, L.colors.ride);
+  const bg = L.ride.bg;
+  if (bg === 'water' || bg === 'suds') {
+    ctx.strokeStyle = bg === 'suds' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 2;
+    for (let r = 1; r <= 5; r++) {
+      for (let x = (now / 40) % 30 - 30; x < W; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, r * T + T * 0.7); ctx.lineTo(x + 12, r * T + T * 0.7); ctx.stroke();
+      }
+    }
+    if (bg === 'suds') for (let i = 0; i < 18; i++) emoji('🫧', ((i * 53 + now / 60) % W), T * (1.3 + (i % 5)), T * 0.35);
+  } else if (bg === 'pit') {
+    ctx.fillStyle = 'rgba(255,210,63,0.5)';
+    for (let i = 0; i < 30; i++) ctx.fillRect((i * 97) % W, T + ((i * 61) % (5 * T)), 2, 2);
+  } else if (bg === 'ravine') {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let i = 0; i < 40; i++) ctx.fillRect((i * 71 + now / 30) % W, T + ((i * 37 + now / 20) % (5 * T)), 3, 3);
+    ctx.strokeStyle = '#2B2B33';
+    ctx.lineWidth = 2;
+    for (let r = 1; r <= 5; r++) { ctx.beginPath(); ctx.moveTo(0, r * T + T * 0.15); ctx.lineTo(W, r * T + T * 0.15); ctx.stroke(); }
+  }
+}
+
+function drawBurstBg() {
+  const W = COLS * T, y = 7 * T, bg = L.burst.bg;
+  band(7, 1, L.colors.burst);
+  if (bg === 'rails') {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    for (let x = 4; x < W; x += T * 0.4) ctx.fillRect(x, y + T * 0.15, T * 0.12, T * 0.7);
+    ctx.fillStyle = '#9AA0A6';
+    ctx.fillRect(0, y + T * 0.28, W, 3);
+    ctx.fillRect(0, y + T * 0.68, W, 3);
+  } else if (bg === 'tile') {
+    for (let x = 0; x < W; x += T / 2) {
+      ctx.fillStyle = (x / (T / 2)) % 2 ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+      ctx.fillRect(x, y, T / 2, T);
+    }
+  } else if (bg === 'snow') {
+    ctx.strokeStyle = 'rgba(15,15,26,0.12)';
+    for (let x = 0; x < W; x += 8) { ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x, y + T - 4); ctx.stroke(); }
+  }
+  if (burst.warn && Math.floor(performance.now() / 200) % 2) {
+    ctx.fillStyle = '#FF2D2D';
+    ctx.beginPath(); ctx.arc(T * 0.3, y + T / 2, T * 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W - T * 0.3, y + T / 2, T * 0.16, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawBackground() {
+  const W = COLS * T;
+  // Goal row.
+  band(0, 1, L.colors.goal);
+  GOAL_COLS.forEach((c, i) => {
+    ctx.fillStyle = '#FFF8E7';
+    ctx.beginPath(); ctx.arc((c + 0.5) * T, T * 0.5, T * 0.42, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#0F0F1A'; ctx.lineWidth = 2; ctx.stroke();
+    emoji(filled[i] ? '🐸' : L.goal.items[i], (c + 0.5) * T, T * 0.5, T * 0.55);
+  });
+  drawRideBg();
+  // Safe strip.
+  band(6, 1, L.colors.safe);
+  L.safe.deco.forEach((d, i) => emoji(d, W - T * (0.6 + i * 0.9), 6.5 * T, T * 0.65));
+  drawBurstBg();
+  // Road section.
+  band(8, 4, L.colors.road);
+  ctx.strokeStyle = L.labelColor ? 'rgba(15,15,26,0.15)' : 'rgba(255,210,63,0.5)';
+  ctx.setLineDash([T * 0.4, T * 0.4]);
+  ctx.lineWidth = 2;
+  for (let r = 9; r <= 11; r++) { ctx.beginPath(); ctx.moveTo(0, r * T); ctx.lineTo(W, r * T); ctx.stroke(); }
+  ctx.setLineDash([]);
+  // Start strip.
+  band(12, 1, L.colors.start);
+  L.start.deco.forEach((d, i) => emoji(d, W - T * (0.6 + i * 0.9), 12.5 * T, T * 0.65));
+
+  label(L.goal.label, 0);
+  label(L.ride.label, 1);
+  label(L.safe.label, 6);
+  label(L.burst.label, 7);
+  L.road.forEach((d, i) => label(d.label, 8 + i));
+  label(L.start.label, 12);
+}
+
+function drawItem(l, it, y) {
+  const x = it.x * T, w = l.len * T, right = l.speed > 0;
+  if (l.style === 'log') {
+    ctx.fillStyle = '#7A4A23';
+    rr(x + 2, y + T * 0.18, w - 4, T * 0.64, T * 0.3); ctx.fill();
+    ctx.strokeStyle = '#4A2C12'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#B07A45';
+    ctx.beginPath(); ctx.arc(x + w - T * 0.3, y + T / 2, T * 0.18, 0, Math.PI * 2); ctx.fill();
+  } else if (l.style === 'plank') {
+    ctx.fillStyle = l.body;
+    rr(x + 2, y + T * 0.15, w - 4, T * 0.7, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+    if (l.deco) emoji(l.deco, x + w / 2, y + T / 2, T * 0.6, right);
+  } else if (l.style === 'tiles') {
+    for (let i = 0; i < l.len; i++) emoji(it.emoji, x + (i + 0.5) * T, y + T / 2, T * 0.82, right);
+  } else if (l.style === 'vehicle') {
+    const headX = right ? x + w - T / 2 : x + T / 2;
+    const bodyX = right ? x : x + T;
+    ctx.fillStyle = l.body;
+    rr(bodyX + 2, y + T * 0.22, w - T - 4, T * 0.56, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+    if (l.deco) emoji(l.deco, bodyX + (w - T) / 2, y + T / 2, T * 0.55, right);
+    emoji(l.head, headX, y + T / 2, T * 0.85, right);
+  } else {
+    emoji(it.emoji, x + w / 2, y + T / 2, T * 0.85, right);
+  }
+}
+
+function drawBurst() {
+  if (burst.x === null) return;
+  const b = L.burst, y = 7 * T, right = b.speed > 0;
+  for (let i = 0; i < b.len; i++) {
+    // The head leads in the direction of travel.
+    const isHead = right ? i === b.len - 1 : i === 0;
+    const cx = (burst.x + i + 0.5) * T;
+    if (isHead) { emoji(b.head, cx, y + T / 2, T * 0.9, right); continue; }
+    if (b.car === 'stage') {
+      ctx.fillStyle = '#8B1E1E';
+      rr(cx - T * 0.45, y + T * 0.18, T * 0.9, T * 0.64, 5); ctx.fill();
+      ctx.fillStyle = '#FFD23F';
+      ctx.fillRect(cx - T * 0.32, y + T * 0.3, T * 0.64, T * 0.18);
+    } else {
+      emoji(b.car, cx, y + T / 2, T * 0.8, right);
+    }
+  }
+}
+
+function drawToad() {
+  const cx = (toad.col + 0.5) * T, cy = (toad.row + 0.5) * T;
+  if (state === 'dying') {
+    const k = toad.deathKind;
+    emoji(k === 'splash' ? '💦' : k === 'fall' ? '💫' : k === 'time' ? '⏰' : '💥', cx, cy, T * 0.9);
+    return;
+  }
+  const s = toad.hop > 0 ? 1.15 : 1;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(s, s);
+  // The Lunch Toad: green, cream belly, red hypnotic eyes.
+  ctx.fillStyle = '#5A8C3F';
+  ctx.strokeStyle = '#0F0F1A';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, T * 0.08, T * 0.36, T * 0.3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#F5E6A8';
+  ctx.beginPath(); ctx.ellipse(0, T * 0.18, T * 0.22, T * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  [-1, 1].forEach(side => {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath(); ctx.arc(side * T * 0.17, -T * 0.16, T * 0.13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FF2D2D';
+    ctx.beginPath(); ctx.arc(side * T * 0.17, -T * 0.16, T * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0F0F1A';
+    ctx.beginPath(); ctx.arc(side * T * 0.17, -T * 0.16, T * 0.03, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
+  lanes.forEach(l => l.items.forEach(it => drawItem(l, it, l.row * T)));
+  drawBurst();
+  if (state === 'play' || state === 'dying') drawToad();
+  document.getElementById('timerBar').style.width = Math.max(0, timeLeft / TIME_PER_LIFE * 100) + '%';
+}
+
+// ---- sizing + loop ----
+function resize() {
+  const maxW = Math.min(document.querySelector('main').clientWidth, 560) - 8;
+  const maxH = window.innerHeight - 260; // leave room for controls on short phones
+  T = Math.floor(Math.max(22, Math.min(maxW / COLS, maxH / ROWS)));
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = COLS * T + 'px';
+  canvas.style.height = ROWS * T + 'px';
+  canvas.width = COLS * T * dpr;
+  canvas.height = ROWS * T * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  stage.style.width = COLS * T + 8 + 'px';
+  document.getElementById('hud').style.width = COLS * T + 'px';
+  document.querySelector('.timer').style.width = COLS * T + 'px';
+}
+window.addEventListener('resize', resize);
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+try { best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) { best = 0; }
+if (best) document.getElementById('bestStart').textContent = 'Best score on this device: ' + best;
+state = 'start';
+lives = 3; score = 0; level = 1;
+filled = GOAL_COLS.map(() => false);
+buildLevel();
+resetToad();
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
