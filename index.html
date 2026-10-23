@@ -770,7 +770,13 @@ body.fate .restaurant-name { font-size: clamp(1.2rem, 4.5vw, 1.6rem); }
   font-size: 1rem;
   line-height: 1.3;
 }
-.rec-line .rec-dish { color: var(--hot-pink); font-weight: 700; }
+.rec-line .rec-dish {
+  display: block;
+  color: var(--hot-pink);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-top: 2px;
+}
 .rec-desc {
   font-family: 'Fredoka', sans-serif;
   font-weight: 400;
@@ -1385,7 +1391,7 @@ function showRecommendation(r) {
   if (!rec) return;
   const line = document.getElementById('recLine');
   // by: "toad" = our favorite; otherwise the restaurant's own pick (see disclaimer.html).
-  line.textContent = (rec.by === 'toad' ? '🐸 The Toad' : r.name) + ' recommends the ';
+  line.textContent = (rec.by === 'toad' ? '🐸 The Toad' : r.name) + ' recommends:';
   const dish = document.createElement('span');
   dish.className = 'rec-dish';
   dish.textContent = rec.dish;
