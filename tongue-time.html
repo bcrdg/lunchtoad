@@ -178,7 +178,7 @@ canvas { display: block; width: 100%; height: auto; }
       </div>
       <button class="btn" id="startBtn">START</button>
       <div class="board-wrap">
-        <div class="board-title">🏆 TOP TONGUES</div>
+        <div class="board-title">🏆 TOP 20 TONGUES</div>
         <ol class="board" id="boardStart"><li class="board-empty">Loading…</li></ol>
       </div>
     </div>
@@ -193,7 +193,7 @@ canvas { display: block; width: 100%; height: auto; }
         </div>
       </form>
       <div class="board-wrap">
-        <div class="board-title">🏆 TOP TONGUES</div>
+        <div class="board-title">🏆 TOP 20 TONGUES</div>
         <ol class="board" id="boardOver"></ol>
       </div>
       <button class="btn" id="againBtn">AGAIN</button>
@@ -578,10 +578,10 @@ function frame(now) {
 
 // ---- High scores: shared top 10 on the Lunch Toad Cloudflare Worker ----
 // Players POST one score; the Worker checks it (names.js rules) and keeps the
-// top 10. If the Worker can't be reached, the board is kept on this device.
+// top 20. If the Worker can't be reached, the board is kept on this device.
 const SCORES_URL = 'https://lunch-toad.brian-423.workers.dev/tongue-scores';
 const LOCAL_BOARD_KEY = 'lt_tongue_board';
-const BOARD_SIZE = 10;
+const BOARD_SIZE = 20; // top 20 (the Worker keeps the same number)
 const NAME_KEY = 'lt_toadroad_initials'; // same remembered name as Toad Road
 
 function cleanBoard(list) {

@@ -20,10 +20,9 @@ const ALLOWED_ORIGINS = [
   'https://bcrdg.github.io',
 ];
 const BOARDS = {
-  '/scores':        { key: 'scores',        maxScore: 1e7, hasLevel: true },   // Toad Road
-  '/tongue-scores': { key: 'tongue-scores', maxScore: 2e5, hasLevel: false },  // Tongue Time (45s rounds)
+  '/scores':        { key: 'scores',        size: 10, maxScore: 1e7, hasLevel: true },   // Toad Road: top 10
+  '/tongue-scores': { key: 'tongue-scores', size: 20, maxScore: 2e5, hasLevel: false },  // Tongue Time: top 20 (45s rounds)
 };
-const BOARD_SIZE = 10;
 const MAX_PUT_BYTES = 200 * 1024;
 const MAX_POST_BYTES = 1024;
 const SAVES_PER_MINUTE = 5; // per IP address, across all boards
@@ -59,7 +58,7 @@ function cleanBoard(list, board) {
     .map(e => cleanEntry(e, board))
     .filter(Boolean)
     .sort((a, b) => b.score - a.score)
-    .slice(0, BOARD_SIZE);
+    .slice(0, board.size);
 }
 
 function todayPacific() {
