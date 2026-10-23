@@ -2768,6 +2768,25 @@ function burstSparkles() {
 const VISITS_COOKIE = 'lt_visits';
 const VISIT_COUNTED_KEY = 'lt_visit_counted';
 function countVisit() {
+  // Testing helper: sonoralunchtoad.com/?visits=9 sets the count to 9 right now
+  // (this load doesn't add one), so opening the site in a NEW tab makes it 10.
+  // Below 10 it also hides the secret features again and lets the
+  // fireworks play again. ?visits=0 resets everything.
+  try {
+    const params = new URLSearchParams(location.search);
+    const forced = params.get('visits');
+    if (forced !== null && /^\d{1,5}$/.test(forced)) {
+      const n = parseInt(forced, 10);
+      setCookie(VISITS_COOKIE, String(n), 365);
+      try { sessionStorage.setItem(VISIT_COUNTED_KEY, '1'); } catch (e) {}
+      if (n < 10) storageRemove('lt_unlock10_seen'); // see CELEBRATED_KEY below
+      params.delete('visits');
+      const rest = params.toString();
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+      return n;
+    }
+  } catch (e) {}
+
   let n = parseInt(getCookie(VISITS_COOKIE) || '0', 10) || 0;
   let counted = false;
   try { counted = sessionStorage.getItem(VISIT_COUNTED_KEY) === '1'; } catch (e) {}
