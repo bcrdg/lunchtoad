@@ -716,33 +716,35 @@ body.fate .restaurant-name { font-size: clamp(1.2rem, 4.5vw, 1.6rem); }
 .restaurant-address {
   font-family: 'Fredoka', sans-serif;
   font-weight: 500;
-  font-size: 0.8rem;
-  opacity: 0.7;
+  font-size: 0.9rem;
+  opacity: 0.85;
   margin-bottom: 4px;
 }
 .restaurant-address:empty { display: none; }
 .map-link {
   display: inline-block;
-  font-family: 'Bagel Fat One', cursive;
-  font-size: 0.95rem;
-  letter-spacing: 1.5px;
-  color: var(--cream);
-  -webkit-text-stroke: 1px var(--ink);
-  background: var(--toad-green);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+  background: var(--toad-dark);
   border: 3px solid var(--ink);
   border-radius: 50px;
-  padding: 6px 18px;
+  padding: 8px 18px;
   box-shadow: 3px 3px 0 var(--ink);
   text-decoration: none;
+  white-space: nowrap;
 }
-.map-link:hover { background: var(--toad-dark); }
+.map-link:hover { background: #2F5222; }
 .map-link:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 .map-alt {
   font-family: 'Fredoka', sans-serif;
   font-weight: 500;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--ink);
-  opacity: 0.6;
+  opacity: 0.8;
+  text-decoration: underline;
 }
 .map-alt:hover { opacity: 1; }
 
@@ -874,9 +876,9 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
     <div class="map-links hidden" id="mapLinks">
       <div class="restaurant-address" id="restaurantAddress"></div>
       <div class="info-buttons">
-        <a class="map-link" id="mapLink" target="_blank" rel="noopener">📍 DIRECTIONS</a>
-        <a class="map-link" id="phoneLink" hidden>📞 CALL</a>
-        <a class="map-link" id="webLink" target="_blank" rel="noopener" hidden>🌐 WEBSITE</a>
+        <a class="map-link" id="mapLink" target="_blank" rel="noopener">📍 Directions</a>
+        <a class="map-link" id="phoneLink" hidden>📞 Call</a>
+        <a class="map-link" id="webLink" target="_blank" rel="noopener" hidden>🌐 Website</a>
       </div>
       <a class="map-alt" id="mapAlt" target="_blank" rel="noopener"></a>
     </div>
@@ -1034,8 +1036,11 @@ function loadState() {
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines);
       }
+      // An empty town list is never restored: "no towns" is only meant for the
+      // KOKS easter egg in the current visit, so new visits start from the default.
       if (Array.isArray(data.towns)) {
-        activeTowns = new Set(data.towns.filter(t => TOWNS[t]));
+        const towns = data.towns.filter(t => TOWNS[t]);
+        if (towns.length) activeTowns = new Set(towns);
       }
     } catch (e) {}
   }
