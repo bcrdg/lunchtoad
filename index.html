@@ -792,6 +792,7 @@ body.cuisine-sandwich  { --c1: #E8C547; --c2: #6B3410; }
 body.cuisine-hotdog    { --c1: #FFD23F; --c2: #DC143C; }
 body.cuisine-coffee    { --c1: #B07242; --c2: #2A1810; }
 body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
+body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
 
 @media (max-width: 480px) {
   h1 {
@@ -924,6 +925,15 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 
     <div class="controls-row">
       <label class="picky-toggle">
+        <input type="checkbox" id="moreMealsCheck">
+        <span>🌙 MORE THAN LUNCH?</span>
+      </label>
+    </div>
+
+    <div class="cuisine-filters hidden" id="mealFilters"></div>
+
+    <div class="controls-row">
+      <label class="picky-toggle">
         <input type="checkbox" id="chainCheck">
         <span>🏢 INCLUDE CORPORATE &amp; CHAIN RESTAURANTS</span>
       </label>
@@ -989,7 +999,29 @@ const cuisineMeta = {
   hotdog:    { emoji: "🌭", label: "FRANK ATTACK" },
   coffee:    { emoji: "☕", label: "BREW TIME" },
   dessert:   { emoji: "🍦", label: "SWEET TOOTH" },
+  drinks:    { emoji: "🍺", label: "BOTTOMS UP" },
 };
+// Cuisines that appear as "Customize food type" checkboxes.
+// Dessert and drinks places are controlled by "More than lunch?" instead.
+const FOOD_TYPES = Object.keys(cuisineMeta).filter(k => k !== 'dessert' && k !== 'drinks');
+
+// "More than lunch?" options. A place lists every meal it's good for in `meals`;
+// it's in the pool if ANY of its meals is checked, and it's only ever in the pool once,
+// so places that fit several categories don't get extra odds.
+const MEALS = {
+  lunch:     { emoji: "🌮", label: "LUNCH" },
+  breakfast: { emoji: "🥞", label: "BREAKFAST" },
+  dinner:    { emoji: "🍽", label: "DINNER" },
+  drinks:    { emoji: "🍹", label: "DRINKS!!" },
+  sweets:    { emoji: "🍦", label: "SWEET TOOTH" },
+};
+
+function defaultMeals(r) {
+  if (r.cuisine === 'dessert') return ['sweets'];
+  if (r.cuisine === 'drinks') return ['drinks'];
+  if (r.cuisine === 'breakfast') return ['breakfast', 'lunch'];
+  return ['lunch'];
+}
 
 const taglines = [
   "I shall reveal thy meal...",
@@ -1016,9 +1048,15 @@ const FORMSPREE_ENDPOINT = ''; // e.g. 'https://formspree.io/f/xxxxxxx' — cont
 const restaurants = [
   ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })), // may carry rec: { dish, desc }
   ...CHAIN_RESTAURANTS.map(r => ({ ...r, chain: true })),
-].filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town]);
+].filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town])
+ .map(r => {
+   const meals = (r.meals || []).filter(m => MEALS[m]);
+   return { ...r, meals: meals.length ? meals : defaultMeals(r) };
+ });
 let customFood = false;
 let includeChains = false; // locally owned only by default
+let moreThanLunch = false;
+let activeMeals = new Set(['lunch']);
 let activeCuisines = new Set(Object.keys(cuisineMeta));
 let activeTowns = new Set(DEFAULT_TOWNS);
 
@@ -1044,6 +1082,11 @@ function loadState() {
       const data = JSON.parse(f);
       customFood = !!(data.customFood ?? data.isPicky);
       includeChains = !!data.includeChains;
+      moreThanLunch = !!data.moreThanLunch;
+      if (Array.isArray(data.meals)) {
+        const meals = data.meals.filter(m => MEALS[m]);
+        if (meals.length) activeMeals = new Set(meals);
+      }
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines);
       }
@@ -1061,18 +1104,34 @@ function saveFilters() {
   storageSet('lt_filters', JSON.stringify({
     customFood,
     includeChains,
+    moreThanLunch,
+    meals: [...activeMeals],
     cuisines: [...activeCuisines],
     towns: [...activeTowns],
   }));
 }
 
+// Meals in play: just lunch unless "More than lunch?" is on.
+function currentMeals() {
+  return moreThanLunch ? activeMeals : new Set(['lunch']);
+}
+
 function availableRestaurants() {
-  return restaurants.filter(r => r.name.trim() && (includeChains || !r.chain));
+  const meals = currentMeals();
+  return restaurants.filter(r =>
+    r.name.trim() &&
+    (includeChains || !r.chain) &&
+    r.meals.some(m => meals.has(m))
+  );
 }
 
 function getActiveRestaurants() {
   let list = availableRestaurants().filter(r => activeTowns.has(r.town));
-  if (customFood) list = list.filter(r => activeCuisines.has(r.cuisine));
+  // Food-type filter only applies to food cuisines; dessert/drinks spots are
+  // already governed by the meal checkboxes.
+  if (customFood) {
+    list = list.filter(r => !FOOD_TYPES.includes(r.cuisine) || activeCuisines.has(r.cuisine));
+  }
   return list;
 }
 
@@ -1133,7 +1192,8 @@ function buildOrbit() {
 function buildCuisineFilters() {
   const container = document.getElementById('cuisineFilters');
   container.innerHTML = '';
-  Object.entries(cuisineMeta).forEach(([key, meta]) => {
+  FOOD_TYPES.forEach(key => {
+    const meta = cuisineMeta[key];
     const label = document.createElement('label');
     label.className = 'cuisine-pill';
     if (activeCuisines.has(key)) label.classList.add('active');
@@ -1205,6 +1265,34 @@ contactForm.addEventListener('submit', async e => {
   } finally {
     btn.disabled = false;
   }
+});
+
+function buildMealFilters() {
+  const container = document.getElementById('mealFilters');
+  container.innerHTML = '';
+  Object.entries(MEALS).forEach(([key, meta]) => {
+    const label = document.createElement('label');
+    label.className = 'cuisine-pill';
+    label.classList.toggle('active', activeMeals.has(key));
+    label.innerHTML =
+      `<input type="checkbox" data-meal="${key}" ${activeMeals.has(key) ? 'checked' : ''}>` +
+      `<span>${meta.emoji} ${meta.label}</span>`;
+    const cb = label.querySelector('input');
+    cb.addEventListener('change', () => {
+      if (cb.checked) activeMeals.add(key); else activeMeals.delete(key);
+      label.classList.toggle('active', cb.checked);
+      saveFilters();
+      updateCount();
+    });
+    container.appendChild(label);
+  });
+}
+
+document.getElementById('moreMealsCheck').addEventListener('change', e => {
+  moreThanLunch = e.target.checked;
+  document.getElementById('mealFilters').classList.toggle('hidden', !moreThanLunch);
+  saveFilters();
+  updateCount();
 });
 
 document.getElementById('customFoodCheck').addEventListener('change', e => {
@@ -1470,8 +1558,11 @@ function init() {
   buildOrbit();
   buildCuisineFilters();
   buildTownFilters();
+  buildMealFilters();
   document.getElementById('customFoodCheck').checked = customFood;
   document.getElementById('cuisineFilters').classList.toggle('hidden', !customFood);
+  document.getElementById('moreMealsCheck').checked = moreThanLunch;
+  document.getElementById('mealFilters').classList.toggle('hidden', !moreThanLunch);
   document.getElementById('chainCheck').checked = includeChains;
   updateCount();
 
