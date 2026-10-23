@@ -962,6 +962,20 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
   z-index: 2;
   border-radius: 50%;
 }
+/* KING TOAD crown (beat Toad Road on hard mode). Sits on his head between the
+   eyes and bobs along with him because it's inside .toad-body-wrap. */
+.crown {
+  display: none;
+  position: absolute;
+  left: 32.5%;
+  top: 2%;
+  width: 35%;
+  z-index: 4;
+  transform: rotate(-8deg);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+body.king .crown { display: block; }
 .eye.poked { animation: eyePoke 0.35s ease; }
 @keyframes eyePoke {
   0%, 100% { transform: scaleY(1); }
@@ -1056,6 +1070,21 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
       </div>
       <!-- Invisible tap target over the mouth (part of the Toad Road easter egg) -->
       <div class="mouth-hit" id="mouthHit" aria-hidden="true"></div>
+      <!-- "KING TOAD" crown: shown when the lt_king cookie is set (beat Toad Road on hard mode) -->
+      <svg class="crown" viewBox="0 0 200 130" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="crownGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFE873"/><stop offset="0.55" stop-color="#FFC21A"/><stop offset="1" stop-color="#E09A00"/>
+          </linearGradient>
+        </defs>
+        <path d="M 14 92 L 8 26 L 52 58 L 100 10 L 148 58 L 192 26 L 186 92 Z"
+              fill="url(#crownGold)" stroke="#0F0F1A" stroke-width="6" stroke-linejoin="round"/>
+        <circle cx="8" cy="24" r="9" fill="#FF3E8F" stroke="#0F0F1A" stroke-width="4"/>
+        <circle cx="100" cy="9" r="10" fill="#3FC1FF" stroke="#0F0F1A" stroke-width="4"/>
+        <circle cx="192" cy="24" r="9" fill="#FF3E8F" stroke="#0F0F1A" stroke-width="4"/>
+        <rect x="10" y="84" width="180" height="40" rx="10" fill="url(#crownGold)" stroke="#0F0F1A" stroke-width="6"/>
+        <text x="100" y="114" text-anchor="middle" font-family="'Bagel Fat One', cursive" font-size="25" letter-spacing="1" fill="#0F0F1A">KING TOAD</text>
+      </svg>
     </div>
 
     <div class="food-orbit" id="foodOrbit"></div>
@@ -2350,6 +2379,15 @@ function countVisit() {
   return n;
 }
 const visitCount = countVisit();
+
+// KING TOAD: toad-road.html sets the "lt_king" cookie when someone beats all six
+// levels in hard mode. Re-saved each visit so the crown never expires on regulars
+// (browsers cap cookies at about 400 days).
+const KING_COOKIE = 'lt_king';
+if (getCookie(KING_COOKIE) === '1') {
+  setCookie(KING_COOKIE, '1', 400);
+  document.body.classList.add('king');
+}
 const UNLOCKS = [];
 function applyUnlocks() {
   UNLOCKS.forEach(u => { if (visitCount >= u.at) { try { u.unlock(); } catch (e) {} } });

@@ -100,6 +100,20 @@ canvas { display: block; }
 }
 .overlay .kicker { font-family: 'Bagel Fat One', cursive; font-weight: 400; letter-spacing: 2px; color: var(--hot-pink); }
 .overlay p { font-weight: 500; line-height: 1.4; max-width: 340px; }
+.hard-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 62, 143, 0.15);
+  border: 2px solid rgba(255, 62, 143, 0.6);
+  border-radius: 50px;
+  padding: 6px 14px;
+}
+.hard-toggle input { width: 18px; height: 18px; accent-color: var(--hot-pink); }
+.hard-toggle small { font-weight: 500; opacity: 0.75; }
+#modeTag { color: var(--hot-pink); }
 .btn {
   font-family: 'Bagel Fat One', cursive;
   font-weight: 400;
@@ -187,6 +201,7 @@ canvas { display: block; }
     <span>SCORE <b id="score">0</b></span>
     <span>LEVEL <b id="level">1</b></span>
     <span id="lives">🐸🐸🐸</span>
+    <span id="modeTag" hidden>💀 HARD</span>
   </div>
 
   <div class="stage" id="stage">
@@ -195,7 +210,8 @@ canvas { display: block; }
       <h2>TOAD ROAD</h2>
       <p>Six levels across Tuolumne County: Washington Street, Old Town Columbia,
          a restaurant kitchen, an old mine shaft, New Melones Lake and Dodge Ridge.
-         Make it across twice to clear a level.</p>
+         Make it across once to clear a level.</p>
+      <label class="hard-toggle"><input type="checkbox" class="hardCheck"> 💀 HARD MODE <small>(fill all 5 spots)</small></label>
       <button class="btn" id="startBtn">START</button>
       <div class="board-wrap">
         <div class="board-title">🏆 TOP TOADS</div>
@@ -221,6 +237,7 @@ canvas { display: block; }
         <div class="board-title">🏆 TOP TOADS</div>
         <ol class="board" id="boardOver"></ol>
       </div>
+      <label class="hard-toggle"><input type="checkbox" class="hardCheck"> 💀 HARD MODE <small>(fill all 5 spots)</small></label>
       <button class="btn" id="againBtn">PLAY AGAIN</button>
     </div>
   </div>
@@ -242,7 +259,7 @@ canvas { display: block; }
 // Toad Road: a Frogger-style easter egg set around Tuolumne County.
 //
 // Every level uses the same 11 x 13 grid:
-//   row 0      goal (five spots; fill CROSSINGS_PER_LEVEL of them)
+//   row 0      goal (five spots: fill 1 to clear a level, or all 5 in hard mode)
 //   rows 1-5   "ride" section: stand on moving platforms or you're done
 //   row 6      safe strip
 //   row 7      "burst" lane: one long fast hazard with a warning light
@@ -253,7 +270,18 @@ canvas { display: block; }
 // ---------------------------------------------------------------------------
 const COLS = 11, ROWS = 13;
 const GOAL_COLS = [1, 3, 5, 7, 9];
-const CROSSINGS_PER_LEVEL = 2; // reach the top this many times to clear a level
+// Crossings needed to clear a level: 1 normally, all 5 spots in hard mode.
+const CROSSINGS_NORMAL = 1;
+const CROSSINGS_HARD = 5;
+const HARD_KEY = 'lt_toadroad_hard';
+// Beating all six levels in hard mode sets this cookie, and the main page
+// then always shows the toad wearing a "KING TOAD" crown (see index.html).
+const KING_COOKIE = 'lt_king';
+let hardRun = false; // hard mode for the game in progress (locked in at START)
+function setKingCookie() {
+  document.cookie = KING_COOKIE + '=1; max-age=' + (400 * 86400) + '; path=/; SameSite=Lax' +
+    (location.protocol === 'https:' ? '; Secure' : '');
+}
 const TIME_PER_LIFE = 45;
 const START_LIVES = 5;
 const BEST_KEY = 'lt_toadroad_best';
@@ -462,7 +490,17 @@ function showBanner() {
   state = 'banner';
 }
 
+const hardChecks = [...document.querySelectorAll('.hardCheck')];
+function setHardCheck(on) { hardChecks.forEach(c => { c.checked = on; }); }
+try { setHardCheck(localStorage.getItem(HARD_KEY) === '1'); } catch (e) {}
+hardChecks.forEach(c => c.addEventListener('change', () => {
+  setHardCheck(c.checked);
+  try { localStorage.setItem(HARD_KEY, c.checked ? '1' : '0'); } catch (e) {}
+}));
+
 function newGame() {
+  hardRun = hardChecks[0].checked;
+  document.getElementById('modeTag').hidden = !hardRun;
   lives = START_LIVES; score = 0; level = 1;
   filled = GOAL_COLS.map(() => false);
   buildLevel();
@@ -538,12 +576,21 @@ function reachGoal() {
   filled[i] = true;
   score += 50 + Math.floor(timeLeft) * 2;
   resetToad();
-  if (filled.filter(Boolean).length >= CROSSINGS_PER_LEVEL) {
-    score += 1000;
+  if (filled.filter(Boolean).length >= (hardRun ? CROSSINGS_HARD : CROSSINGS_NORMAL)) {
+    score += hardRun ? 3000 : 1000;
     level += 1;
     filled = GOAL_COLS.map(() => false);
     buildLevel();
     showBanner();
+    if (hardRun && level === LEVELS.length + 1) {
+      // Just cleared the sixth level in hard mode: the game is beaten.
+      setKingCookie();
+      document.getElementById('bannerKicker').textContent = '👑 HARD MODE BEATEN 👑';
+      document.getElementById('bannerTitle').textContent = 'ALL HAIL THE KING TOAD';
+      document.getElementById('bannerText').textContent =
+        'You beat all six levels on hard mode. From now on the Toad wears his crown on the main page. Keep going for points!';
+      bannerTimer = 5;
+    }
   }
   updateHud();
 }
