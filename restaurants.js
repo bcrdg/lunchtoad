@@ -8,7 +8,10 @@
 // "<name> recommends the <dish>" with the description in small text underneath:
 //   { name: "Example Grill", cuisine: "american", town: "sonora",
 //     rec: { dish: "Patty Melt", desc: "Grilled rye, caramelized onions, Swiss, house sauce." } },
-// Only add recs that came from the restaurant itself.
+// Only add plain recs that came from the restaurant itself.
+// For our own favorite, add by: "toad" and it shows "The Toad recommends the <dish>":
+//     rec: { dish: "Carnitas Burrito", desc: "...", by: "toad" }
+// (The difference is explained on disclaimer.html.)
 const LOCAL_RESTAURANTS = [
   // sonora
   { name: "The Armory", cuisine: "american", town: "sonora",

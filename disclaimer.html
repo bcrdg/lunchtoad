@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disclaimer — Sonora Lunch Toad</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0F0F1A;
+  --bg: #1B1147;
+  --bg-deep: #0A0820;
+  --toad-dark: #3E6B2D;
+  --hot-pink: #FF3E8F;
+  --yellow: #FFD23F;
+  --cream: #FFF8E7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Fredoka', sans-serif;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  background-color: var(--bg-deep);
+  background-attachment: fixed;
+  color: var(--cream);
+  min-height: 100vh;
+  padding: 32px 16px 48px;
+}
+main { max-width: 620px; margin: 0 auto; }
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(2rem, 9vw, 3rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink), 4px 4px 0 var(--hot-pink), 8px 8px 0 var(--ink);
+  letter-spacing: 2px;
+  text-align: center;
+  transform: rotate(-2deg);
+  margin-bottom: 6px;
+}
+.sub {
+  text-align: center;
+  font-style: italic;
+  opacity: 0.8;
+  margin-bottom: 24px;
+}
+.card {
+  background: var(--cream);
+  color: var(--ink);
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 24px 22px;
+}
+h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+  color: var(--hot-pink);
+  margin: 22px 0 6px;
+}
+h2:first-child { margin-top: 0; }
+p { font-size: 1rem; line-height: 1.55; font-weight: 500; }
+p + p { margin-top: 8px; }
+.tag {
+  display: inline-block;
+  font-weight: 700;
+  background: rgba(255, 210, 63, 0.45);
+  padding: 0 6px;
+  border-radius: 6px;
+}
+.back {
+  display: inline-block;
+  margin-top: 24px;
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 24px;
+  box-shadow: 5px 5px 0 var(--ink);
+  text-decoration: none;
+}
+.back:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+.center { text-align: center; }
+a.inline { color: var(--toad-dark); font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1>THE FINE PRINT</h1>
+  <p class="sub">"The Toad is wise, but the Toad is not a lawyer."</p>
+
+  <div class="card">
+    <h2>Where the restaurants come from</h2>
+    <p>
+      Every restaurant on Lunch Toad comes from public information: business listings,
+      review sites, and restaurants' own websites and menus. Hours, phone numbers and
+      addresses change, and places open and close, so call ahead if it matters.
+      We're not affiliated with any restaurant on the list.
+    </p>
+
+    <h2>The picks are random</h2>
+    <p>
+      The Toad picks at random from whatever towns and food types you've selected.
+      Every restaurant has the same odds. No favorites, no paid placement.
+    </p>
+
+    <h2>Recommendations</h2>
+    <p>
+      When a pick comes with a recommendation, the wording tells you who's recommending it:
+    </p>
+    <p>
+      <span class="tag">"[Restaurant] recommends…"</span> means the restaurant told us that's their favorite.
+    </p>
+    <p>
+      <span class="tag">"The Toad recommends…"</span> means it's <em>our</em> favorite. Sometimes we
+      pull these straight from a restaurant's own menu because we like them.
+    </p>
+
+    <h2>Coupons</h2>
+    <p>
+      Restaurants can send us coupons to show on the site. A coupon only counts if it's on
+      your screen when the Toad picks that restaurant. Telling the cashier "Lunch Toad said a
+      dollar off" won't work.
+    </p>
+
+    <h2>Restaurants: want to show up more?</h2>
+    <p>
+      If you'd like to bribe us so your restaurant pops up more often,
+      <a class="inline" href="./#contact">send us something through the contact form</a>.
+      We'll happily take your money. We won't change the odds. The Toad cannot be bought.
+    </p>
+
+    <h2>Your info</h2>
+    <p>
+      Your town and food choices are saved in your own browser so they're there next time,
+      along with one small cookie for a joke you may never find. Nothing is sent to us
+      unless you use the contact form.
+    </p>
+  </div>
+
+  <p class="center"><a class="back" href="./">← BACK TO THE TOAD</a></p>
+</main>
+</body>
+</html>

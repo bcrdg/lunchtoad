@@ -633,6 +633,15 @@ body.revealed .result-card {
   border-color: var(--yellow);
   background: rgba(255, 210, 63, 0.1);
 }
+.disclaimer-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--cream);
+  opacity: 0.75;
+}
+.disclaimer-link:hover { opacity: 1; color: var(--yellow); }
 
 .contact-form {
   padding: 16px 20px 20px;
@@ -925,6 +934,8 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
       Have a restaurant to add? Do you hate our website?
       <strong>Click here.</strong>
     </button>
+
+    <a class="disclaimer-link" href="disclaimer.html">📜 Disclaimer &amp; fine print</a>
   </div>
 </div>
 
@@ -1249,11 +1260,13 @@ function showMapLinks(r) {
   main.hidden = false;
   if (IS_APPLE) {
     main.href = appleMapsUrl(r);
+    main.textContent = '📍 Apple Maps';
     alt.href = googleMapsUrl(r);
-    alt.textContent = 'or open in Google Maps';
+    alt.textContent = 'or use Google Maps';
     alt.hidden = false;
   } else {
     main.href = googleMapsUrl(r);
+    main.textContent = '📍 Google Maps';
     alt.hidden = true;
   }
 
@@ -1281,7 +1294,8 @@ function showRecommendation(r) {
   recBox.classList.toggle('hidden', !rec);
   if (!rec) return;
   const line = document.getElementById('recLine');
-  line.textContent = r.name + ' recommends the ';
+  // by: "toad" = our favorite; otherwise the restaurant's own pick (see disclaimer.html).
+  line.textContent = (rec.by === 'toad' ? '🐸 The Toad' : r.name) + ' recommends the ';
   const dish = document.createElement('span');
   dish.className = 'rec-dish';
   dish.textContent = rec.dish;
@@ -1460,6 +1474,12 @@ function init() {
   document.getElementById('cuisineFilters').classList.toggle('hidden', !customFood);
   document.getElementById('chainCheck').checked = includeChains;
   updateCount();
+
+  // Links like sonoralunchtoad.com/#contact (used by disclaimer.html) open the contact form.
+  if (location.hash === '#contact') {
+    document.getElementById('contactBtn').click();
+    history.replaceState(null, '', location.pathname);
+  }
 }
 
 document.getElementById('chainCheck').addEventListener('change', e => {
