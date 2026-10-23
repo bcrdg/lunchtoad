@@ -814,6 +814,13 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 
     <div class="cuisine-filters hidden" id="cuisineFilters"></div>
 
+    <div class="controls-row">
+      <label class="picky-toggle">
+        <input type="checkbox" id="chainCheck">
+        <span>🏢 INCLUDE CORPORATE &amp; CHAIN RESTAURANTS</span>
+      </label>
+    </div>
+
     <button class="contact-btn" id="contactBtn">
       Do you own a restaurant and want to tell us what you recommend?
       Have a restaurant to add? Do you hate our website?
@@ -896,8 +903,12 @@ const DEFAULT_TOWNS = ['sonora'];
 
 const FORMSPREE_ENDPOINT = ''; // e.g. 'https://formspree.io/f/xxxxxxx' — contact form is inactive until set
 
-const restaurants = DEFAULT_RESTAURANTS.filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town]);
+const restaurants = [
+  ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })),
+  ...CHAIN_RESTAURANTS.map(r => ({ ...r, chain: true })),
+].filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town]);
 let customFood = false;
+let includeChains = false; // locally owned only by default
 let activeCuisines = new Set(Object.keys(cuisineMeta));
 let activeTowns = new Set(DEFAULT_TOWNS);
 
@@ -922,6 +933,7 @@ function loadState() {
     try {
       const data = JSON.parse(f);
       customFood = !!(data.customFood ?? data.isPicky);
+      includeChains = !!data.includeChains;
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines);
       }
@@ -935,13 +947,18 @@ function loadState() {
 function saveFilters() {
   storageSet('lt_filters', JSON.stringify({
     customFood,
+    includeChains,
     cuisines: [...activeCuisines],
     towns: [...activeTowns],
   }));
 }
 
+function availableRestaurants() {
+  return restaurants.filter(r => r.name.trim() && (includeChains || !r.chain));
+}
+
 function getActiveRestaurants() {
-  let list = restaurants.filter(r => r.name.trim() && activeTowns.has(r.town));
+  let list = availableRestaurants().filter(r => activeTowns.has(r.town));
   if (customFood) list = list.filter(r => activeCuisines.has(r.cuisine));
   return list;
 }
@@ -982,7 +999,7 @@ function buildTownFilters() {
 function updateTownCounts() {
   document.querySelectorAll('[data-town-count]').forEach(el => {
     const t = el.dataset.townCount;
-    el.textContent = '(' + restaurants.filter(r => r.town === t && r.name.trim()).length + ')';
+    el.textContent = '(' + availableRestaurants().filter(r => r.town === t).length + ')';
   });
 }
 
@@ -1196,8 +1213,16 @@ function init() {
   buildTownFilters();
   document.getElementById('customFoodCheck').checked = customFood;
   document.getElementById('cuisineFilters').classList.toggle('hidden', !customFood);
+  document.getElementById('chainCheck').checked = includeChains;
   updateCount();
 }
+
+document.getElementById('chainCheck').addEventListener('change', e => {
+  includeChains = e.target.checked;
+  saveFilters();
+  updateCount();
+});
+
 init();
 </script>
 
