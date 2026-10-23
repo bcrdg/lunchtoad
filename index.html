@@ -568,21 +568,24 @@ body.revealed .result-card {
 
 /* LUNCH OPTIONS (small, afterthought-style toggle) */
 .options-toggle {
-  margin-top: 14px;
-  background: none;
-  border: none;
-  color: var(--cream);
-  opacity: 0.55;
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 500;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
+  margin-top: 18px;
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(1rem, 4vw, 1.25rem);
+  letter-spacing: 2px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 26px;
   cursor: pointer;
-  padding: 4px 8px;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
+  box-shadow: 5px 5px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
 }
-.options-toggle:hover, .options-toggle:focus-visible { opacity: 1; }
+.options-toggle:hover, .options-toggle:focus-visible { background: var(--cream); }
+.options-toggle:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
 .options-toggle .caret { display: inline-block; transition: transform 0.2s; }
 .options-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
 
@@ -684,6 +687,29 @@ body.revealed .result-card {
   margin-top: 2px;
 }
 .restaurant-town:empty { display: none; }
+
+/* "X recommends the Y" — only for local restaurants that sent us a pick */
+.rec {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px dashed rgba(15, 15, 26, 0.25);
+}
+.rec.hidden { display: none; }
+.rec-line {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.rec-line .rec-dish { color: var(--hot-pink); font-weight: 700; }
+.rec-desc {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  opacity: 0.75;
+  margin-top: 4px;
+}
 
 /* Cuisine eye color themes */
 body.cuisine-american  { --c1: #DC143C; --c2: #1E40AF; }
@@ -787,6 +813,10 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
     <div class="cuisine-tag" id="cuisineTag">READY</div>
     <div class="restaurant-name" id="restaurantName">Click below to begin...</div>
     <div class="restaurant-town" id="restaurantTown"></div>
+    <div class="rec hidden" id="recBox">
+      <div class="rec-line" id="recLine"></div>
+      <div class="rec-desc" id="recDesc"></div>
+    </div>
   </div>
 
   <button class="lunch-btn" id="lunchBtn">FIND MY LUNCH</button>
@@ -798,7 +828,7 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
   <div class="warning-msg" id="warningMsg">⚠ NOTHING TO PICK FROM, PICKY ⚠</div>
 
   <button class="options-toggle" id="optionsToggle" aria-expanded="false" aria-controls="optionsPanel">
-    ⚙ lunch options <span class="caret">▾</span>
+    ⚙ LUNCH OPTIONS <span class="caret">▾</span>
   </button>
 
   <div class="options-panel hidden" id="optionsPanel">
@@ -904,7 +934,7 @@ const DEFAULT_TOWNS = ['sonora'];
 const FORMSPREE_ENDPOINT = ''; // e.g. 'https://formspree.io/f/xxxxxxx' — contact form is inactive until set
 
 const restaurants = [
-  ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })),
+  ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })), // may carry rec: { dish, desc }
   ...CHAIN_RESTAURANTS.map(r => ({ ...r, chain: true })),
 ].filter(r => cuisineMeta[r.cuisine] && TOWNS[r.town]);
 let customFood = false;
@@ -1119,6 +1149,20 @@ const lunchBtn = document.getElementById('lunchBtn');
 const nameDisplay = document.getElementById('restaurantName');
 const cuisineTag = document.getElementById('cuisineTag');
 const townDisplay = document.getElementById('restaurantTown');
+const recBox = document.getElementById('recBox');
+
+function showRecommendation(r) {
+  const rec = !r.chain && r.rec && r.rec.dish ? r.rec : null;
+  recBox.classList.toggle('hidden', !rec);
+  if (!rec) return;
+  const line = document.getElementById('recLine');
+  line.textContent = r.name + ' recommends the ';
+  const dish = document.createElement('span');
+  dish.className = 'rec-dish';
+  dish.textContent = rec.dish;
+  line.appendChild(dish);
+  document.getElementById('recDesc').textContent = rec.desc || '';
+}
 const finalFood = document.getElementById('finalFood');
 const sparklesEl = document.getElementById('sparkles');
 
@@ -1148,6 +1192,7 @@ function startSearch() {
   lunchBtn.textContent = 'CONSULTING...';
   cuisineTag.textContent = '...';
   townDisplay.textContent = '';
+  recBox.classList.add('hidden');
 
   cycleInterval = setInterval(() => {
     const r = active[Math.floor(Math.random() * active.length)];
@@ -1174,6 +1219,7 @@ function reveal() {
   nameDisplay.textContent = chosen.name;
   cuisineTag.textContent = meta.label;
   townDisplay.textContent = activeTowns.size > 1 ? '📍 ' + TOWNS[chosen.town] : '';
+  showRecommendation(chosen);
 
   burstSparkles();
 

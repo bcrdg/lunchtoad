@@ -2,6 +2,13 @@
 // Researched Oct 2026. To add or remove a place, edit a line here and push.
 
 // Locally owned — shown by default.
+//
+// Restaurant recommendations: when a restaurant tells us what to order, add a `rec`
+// to its line and the result card will show
+// "<name> recommends the <dish>" with the description in small text underneath:
+//   { name: "Example Grill", cuisine: "american", town: "sonora",
+//     rec: { dish: "Patty Melt", desc: "Grilled rye, caramelized onions, Swiss, house sauce." } },
+// Only add recs that came from the restaurant itself.
 const LOCAL_RESTAURANTS = [
   // sonora
   { name: "The Armory", cuisine: "american", town: "sonora" },
