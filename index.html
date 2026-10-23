@@ -1819,38 +1819,55 @@ const sfx = (() => {
     ping(ac, 3136, t0 + 0.32, 1.6, 0.05);
   }
 
-  // One crunchy bite: a low thump plus a short burst of filtered crackle.
+  // One crunchy bite, like biting a chip: dozens of tiny sharp cracks
+  // ("grains") packed into ~0.2s, densest at the start, through a bright filter.
+  // A quick muffled snap underneath gives the bite some body.
   function chomp(ac, when, volume) {
-    const thump = ac.createOscillator();
-    const tg = ac.createGain();
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(170, when);
-    thump.frequency.exponentialRampToValueAtTime(55, when + 0.09);
-    tg.gain.setValueAtTime(0.0001, when);
-    tg.gain.exponentialRampToValueAtTime(0.35 * volume, when + 0.008);
-    tg.gain.exponentialRampToValueAtTime(0.0001, when + 0.12);
-    thump.connect(tg).connect(out);
-    thump.start(when);
-    thump.stop(when + 0.15);
-
-    const len = 0.11;
-    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate);
+    const len = 0.2;
+    const rate = ac.sampleRate;
+    const buf = ac.createBuffer(1, Math.ceil(rate * len), rate);
     const data = buf.getChannelData(0);
-    // Uneven, spiky noise sounds more like crunching than smooth hiss
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.3 ? 1 : 0.25);
+    const grains = 45 + Math.floor(Math.random() * 20);
+    for (let g = 0; g < grains; g++) {
+      // Front-loaded: squaring the random number bunches the cracks early
+      const start = Math.floor(Math.pow(Math.random(), 2) * (data.length - rate * 0.006));
+      const size = Math.floor(rate * (0.0008 + Math.random() * 0.003)); // 0.8–3.8ms each
+      const amp = (0.3 + Math.random() * 0.7) * (1 - start / data.length);
+      for (let i = 0; i < size; i++) {
+        data[start + i] += (Math.random() * 2 - 1) * amp * Math.exp(-6 * i / size);
+      }
+    }
     const crunch = ac.createBufferSource();
     crunch.buffer = buf;
-    const band = ac.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 900 + Math.random() * 700;
-    band.Q.value = 1.2;
+    const high = ac.createBiquadFilter();
+    high.type = 'highpass';
+    high.frequency.value = 1400;
+    const bright = ac.createBiquadFilter();
+    bright.type = 'peaking';
+    bright.frequency.value = 3200 + Math.random() * 1500;
+    bright.Q.value = 0.8;
+    bright.gain.value = 6;
     const cg = ac.createGain();
-    cg.gain.setValueAtTime(0.0001, when);
-    cg.gain.exponentialRampToValueAtTime(0.5 * volume, when + 0.005);
-    cg.gain.exponentialRampToValueAtTime(0.0001, when + len);
-    crunch.connect(band).connect(cg).connect(out);
+    cg.gain.value = 0.55 * volume;
+    crunch.connect(high).connect(bright).connect(cg).connect(out);
     crunch.start(when);
     crunch.stop(when + len + 0.02);
+
+    // Muffled snap: a 30ms burst of low-passed noise at the moment of the bite
+    const sLen = 0.03;
+    const sBuf = ac.createBuffer(1, Math.ceil(rate * sLen), rate);
+    const sData = sBuf.getChannelData(0);
+    for (let i = 0; i < sData.length; i++) sData[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / sData.length);
+    const snap = ac.createBufferSource();
+    snap.buffer = sBuf;
+    const low = ac.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 600;
+    const sg = ac.createGain();
+    sg.gain.value = 0.5 * volume;
+    snap.connect(low).connect(sg).connect(out);
+    snap.start(when);
+    snap.stop(when + sLen + 0.02);
   }
 
   // Munching while the toad eats the food, timed to the 1.6s "eating"
@@ -1859,7 +1876,7 @@ const sfx = (() => {
     const ac = audio();
     if (!ac) return;
     const t0 = ac.currentTime;
-    [0.68, 0.9, 1.1].forEach((t, i) => chomp(ac, t0 + t + Math.random() * 0.03, 1 - i * 0.15));
+    [0.66, 0.86, 1.06].forEach((t, i) => chomp(ac, t0 + t + Math.random() * 0.02, 1 - i * 0.12));
     const gulp = ac.createOscillator();
     const gg = ac.createGain();
     const g0 = t0 + 1.32;

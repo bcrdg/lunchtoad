@@ -212,8 +212,6 @@ const LOCAL_RESTAURANTS = [
     website: "https://www.facebook.com/profile.php?id=61558409494245" },
   { name: "Mijo's Oak BBQ", cuisine: "bbq", town: "sonora",
     meals: ["lunch","dinner"] },
-  { name: "Rockin' Bar-B Texas BBQ", cuisine: "bbq", town: "sonora",
-    meals: ["lunch","dinner"] },
   { name: "Mandy's Breakfast House", cuisine: "breakfast", town: "sonora",
     meals: ["breakfast","lunch"],
     address: "22267 Parrotts Ferry Rd, Sonora, CA 95370",
