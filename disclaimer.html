@@ -89,6 +89,7 @@ p + p { margin-top: 8px; }
 .back:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
 .center { text-align: center; }
 a.inline { color: var(--toad-dark); font-weight: 700; }
+code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; background: rgba(15, 15, 26, 0.08); padding: 1px 5px; border-radius: 5px; }
 </style>
 </head>
 <body>
@@ -107,8 +108,48 @@ a.inline { color: var(--toad-dark); font-weight: 700; }
 
     <h2>The picks are random</h2>
     <p>
-      The Toad picks at random from whatever towns and food types you've selected.
-      Every restaurant has the same odds. No favorites, no paid placement.
+      The Toad picks at random from whatever towns, meals and food types you've selected.
+      Every restaurant gets the same odds. No favorites, no paid placement.
+      It also works like a deck of cards: you'll get through every place on your list
+      before the Toad sends you anywhere twice.
+    </p>
+
+    <h2>How the Toad picks (for nerds)</h2>
+    <p>
+      <strong>1. Build the pool.</strong> Your checkboxes (towns, meals, food types, chains)
+      filter the list down to a pool. Each restaurant is in the pool at most once, even if
+      it matches several boxes. A brewery that's lunch, dinner <em>and</em> drinks has the
+      same odds as a taco stand that's only lunch.
+    </p>
+    <p>
+      <strong>2. Shuffle bag.</strong> Your device keeps a list of places it has already been
+      dealt. Each spin picks uniformly among the places in your pool you <em>haven't</em> had
+      yet, which works out exactly the same as shuffling the pool and dealing it one card at a time.
+      If your list has 58 places, you'll see all 58 before any repeats.
+    </p>
+    <p>
+      <strong>3. Reshuffle.</strong> Once you've been dealt the whole pool, the deck reshuffles.
+      Your last pick is excluded from the first spin of the new round, so you never get the same
+      place twice in a row.
+    </p>
+    <p>
+      <strong>4. Changing filters mid-deck.</strong> Places you've already had stay marked.
+      If you add a town, its places join the remaining deck. If you remove one, those places just
+      sit out until you add it back.
+    </p>
+    <p>
+      <strong>5. The random numbers.</strong> Picks use your browser's cryptographic random number
+      generator (<code>crypto.getRandomValues</code>), the same source used for security keys,
+      with rejection sampling so no position on the list is even slightly favored. Very old browsers
+      without it fall back to <code>Math.random()</code>.
+    </p>
+    <p>
+      <strong>6. The spinning names are just for show.</strong> The names flashing by while the Toad
+      thinks have nothing to do with the final pick, which is made once at the end.
+    </p>
+    <p>
+      The "already dealt" list is stored in your browser's local storage (<code>lt_seen</code>).
+      It never leaves your device. Clearing your browser data starts a fresh deck.
     </p>
 
     <h2>Recommendations</h2>
@@ -139,8 +180,8 @@ a.inline { color: var(--toad-dark); font-weight: 700; }
 
     <h2>Your info</h2>
     <p>
-      Your town and food choices are saved in your own browser so they're there next time,
-      along with one small cookie for a joke you may never find. Nothing is sent to us
+      Your choices and the list of places you've already been dealt are saved in your own
+      browser so they're there next time, along with one small cookie for a joke you may never find. Nothing is sent to us
       unless you use the contact form.
     </p>
   </div>

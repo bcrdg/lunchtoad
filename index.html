@@ -1437,8 +1437,7 @@ function reveal() {
   clearInterval(cycleInterval);
   document.body.classList.remove('searching');
 
-  const active = getActiveRestaurants();
-  const chosen = active[Math.floor(Math.random() * active.length)];
+  const chosen = drawFromBag(getActiveRestaurants());
   const meta = cuisineMeta[chosen.cuisine];
 
   void document.body.offsetWidth;
@@ -1459,6 +1458,57 @@ function reveal() {
     lunchBtn.disabled = false;
     lunchBtn.textContent = 'AGAIN, TOAD';
   }, 1700);
+}
+
+// ---- Picking: shuffle bag + crypto randomness ----
+// Works like dealing from a shuffled deck: every place in the current pool comes up
+// once before any repeats. We remember which places this device has already been
+// dealt (localStorage "lt_seen") and pick uniformly among the ones it hasn't.
+// When the pool is used up, the deck reshuffles, and the last pick can't be first.
+// Changing filters just changes the pool; the "seen" list carries over.
+const SEEN_KEY = 'lt_seen';
+
+function placeKey(r) { return r.name + '|' + r.town; }
+
+// Uniform integer in [0, n) from the browser's cryptographic generator,
+// with rejection sampling so there's no modulo bias. Falls back to Math.random.
+function randomInt(n) {
+  try {
+    const limit = Math.floor(0x100000000 / n) * n;
+    const buf = new Uint32Array(1);
+    do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
+    return buf[0] % n;
+  } catch (e) {
+    return Math.floor(Math.random() * n);
+  }
+}
+
+function loadSeen() {
+  try {
+    const data = JSON.parse(storageGet(SEEN_KEY) || '{}');
+    return { seen: new Set(Array.isArray(data.seen) ? data.seen : []), last: data.last || null };
+  } catch (e) {
+    return { seen: new Set(), last: null };
+  }
+}
+
+function drawFromBag(pool) {
+  const valid = new Set(restaurants.map(placeKey));
+  let { seen, last } = loadSeen();
+  seen = new Set([...seen].filter(k => valid.has(k))); // forget removed places
+
+  let fresh = pool.filter(r => !seen.has(placeKey(r)));
+  if (fresh.length === 0) {
+    // Whole pool has been dealt: reshuffle. Forget this pool's places (keep others),
+    // and avoid repeating the very last pick when possible.
+    pool.forEach(r => seen.delete(placeKey(r)));
+    fresh = pool.length > 1 ? pool.filter(r => placeKey(r) !== last) : pool;
+  }
+
+  const chosen = fresh[randomInt(fresh.length)];
+  seen.add(placeKey(chosen));
+  storageSet(SEEN_KEY, JSON.stringify({ seen: [...seen], last: placeKey(chosen) }));
+  return chosen;
 }
 
 // ---- KOKS easter egg ----
