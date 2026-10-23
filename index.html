@@ -696,6 +696,16 @@ body.revealed .result-card {
   gap: 4px;
 }
 .map-links.hidden { display: none; }
+.map-alt[hidden] { display: none; }
+
+/* KOKS easter egg: buttons vanish; the fate page also hides the result's extras */
+body.koksed .lunch-btn,
+body.koksed .options-toggle,
+body.koksed .options-panel,
+body.koksed .warning-msg { display: none; }
+body.fate .map-links,
+body.fate .restaurant-town { display: none; }
+body.fate .restaurant-name { font-size: clamp(1.2rem, 4.5vw, 1.6rem); }
 .info-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -1054,12 +1064,10 @@ function updateCount() {
   const active = getActiveRestaurants();
   document.getElementById('restCount').textContent = active.length;
   document.getElementById('restWord').textContent = active.length === 1 ? 'restaurant' : 'restaurants';
-  const warning = document.getElementById('warningMsg');
-  warning.textContent = activeTowns.size === 0
-    ? '⚠ PICK AT LEAST ONE TOWN ⚠'
-    : '⚠ NOTHING TO PICK FROM, PICKY ⚠';
-  warning.classList.toggle('visible', active.length === 0);
-  document.getElementById('lunchBtn').disabled = active.length === 0;
+  // No towns selected is allowed on purpose: the toad picks KOKS (see revealKoks).
+  const stuck = active.length === 0 && activeTowns.size > 0;
+  document.getElementById('warningMsg').classList.toggle('visible', stuck);
+  document.getElementById('lunchBtn').disabled = stuck;
   updateTownCounts();
 }
 
@@ -1191,8 +1199,10 @@ document.getElementById('customFoodCheck').addEventListener('change', e => {
 });
 
 let taglineIndex = 0;
+let holdTagline = false; // keeps a special message up until the next spin
 const taglineEl = document.getElementById('tagline');
 setInterval(() => {
+  if (holdTagline) return;
   if (document.body.classList.contains('searching') ||
       document.body.classList.contains('eating')) return;
   taglineIndex = (taglineIndex + 1) % taglines.length;
@@ -1231,6 +1241,7 @@ function googleMapsUrl(r) {
 function showMapLinks(r) {
   const main = document.getElementById('mapLink');
   const alt = document.getElementById('mapAlt');
+  main.hidden = false;
   if (IS_APPLE) {
     main.href = appleMapsUrl(r);
     alt.href = googleMapsUrl(r);
@@ -1289,7 +1300,8 @@ function clearCuisineClasses() {
 }
 
 function startSearch() {
-  const active = getActiveRestaurants();
+  const koks = activeTowns.size === 0;
+  const active = koks ? restaurants : getActiveRestaurants();
   if (active.length === 0) return;
 
   clearCuisineClasses();
@@ -1297,6 +1309,7 @@ function startSearch() {
   void document.body.offsetWidth;
   document.body.classList.add('searching');
 
+  holdTagline = false;
   lunchBtn.disabled = true;
   lunchBtn.textContent = 'CONSULTING...';
   cuisineTag.textContent = '...';
@@ -1310,7 +1323,7 @@ function startSearch() {
   }, 70);
 
   const duration = 2400 + Math.random() * 800;
-  setTimeout(reveal, duration);
+  setTimeout(koks ? revealKoks : reveal, duration);
 }
 
 function reveal() {
@@ -1341,6 +1354,75 @@ function reveal() {
   }, 1700);
 }
 
+// ---- KOKS easter egg ----
+// Spin with no towns selected -> KOKS, and the buttons vanish.
+// A cookie (lt_koks) tracks what happens on the next visits:
+//   stage 1: next load shows only the toad and "You've chosen your fate."
+//   stage 2: the load after that is the normal site, reset to defaults,
+//            with "You're persistent. Try again" as the header.
+const KOKS_COOKIE = 'lt_koks';
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function setCookie(name, value, days) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${days * 86400}; path=/; SameSite=Lax` +
+    (location.protocol === 'https:' ? '; Secure' : '');
+}
+function deleteCookie(name) {
+  document.cookie = `${name}=; max-age=0; path=/`;
+}
+
+function revealKoks() {
+  clearInterval(cycleInterval);
+  document.body.classList.remove('searching');
+  void document.body.offsetWidth;
+  document.body.classList.add('eating', 'revealed');
+
+  finalFood.textContent = '🐟';
+  cuisineTag.textContent = 'THE EDGE OF THE EARTH';
+  nameDisplay.textContent = 'KOKS';
+  townDisplay.textContent = "Well, you didn't choose a town, so we picked the most remote restaurant in the world.";
+  recBox.classList.add('hidden');
+  document.getElementById('restaurantAddress').textContent = '';
+  document.getElementById('mapLink').hidden = true;
+  document.getElementById('phoneLink').hidden = true;
+  document.getElementById('mapAlt').hidden = true;
+  const web = document.getElementById('webLink');
+  web.hidden = false;
+  web.href = 'https://koks.fo/';
+  mapLinks.classList.remove('hidden');
+
+  burstSparkles();
+  setCookie(KOKS_COOKIE, '1', 30);
+
+  setTimeout(() => {
+    document.body.classList.remove('eating');
+    document.body.classList.add('koksed'); // hides Find My Lunch + Lunch Options
+  }, 1700);
+}
+
+// Returns true if the fate page was shown (and the normal page should stay locked).
+function applyKoksStage() {
+  const stage = getCookie(KOKS_COOKIE);
+  if (stage === '1') {
+    setCookie(KOKS_COOKIE, '2', 30);
+    document.body.classList.add('koksed', 'fate');
+    cuisineTag.textContent = '🐟 THE TOAD HAS SPOKEN 🐟';
+    nameDisplay.textContent = "You've chosen your fate. KOKS is the choice.";
+    holdTagline = true;
+    taglineEl.textContent = 'KOKS';
+    return true;
+  }
+  if (stage === '2') {
+    deleteCookie(KOKS_COOKIE);
+    storageRemove('lt_filters'); // back to defaults: Sonora only, local only, all food types
+    holdTagline = true;
+    taglineEl.textContent = "You're persistent. Try again";
+  }
+  return false;
+}
+
 function burstSparkles() {
   sparklesEl.innerHTML = '';
   const count = 14;
@@ -1364,6 +1446,7 @@ function burstSparkles() {
 }
 
 function init() {
+  if (applyKoksStage()) return;
   loadState();
   buildOrbit();
   buildCuisineFilters();
