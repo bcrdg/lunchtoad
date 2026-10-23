@@ -119,11 +119,6 @@ const LOCAL_RESTAURANTS = [
     address: "14879 Mono Way, Sonora, CA 95370",
     phone: "(209) 768-0824",
     website: "https://taqueriaelcapitanca.com/" },
-  { name: "California Burrito", cuisine: "mexican", town: "sonora",
-    meals: ["breakfast","lunch","dinner"],
-    address: "13796 Mono Way, Sonora, CA 95370",
-    phone: "(209) 692-9070",
-    website: "https://www.eatcaliforniaburrito.com/" },
   { name: "U-Kneada Burrito & Pizza", cuisine: "mexican", town: "sonora",
     meals: ["lunch","dinner"],
     address: "20871 Longeway Rd, Sonora, CA 95370",
@@ -665,6 +660,11 @@ const LOCAL_RESTAURANTS = [
 // "Include corporate & chain restaurants" is checked in Lunch Options.
 const CHAIN_RESTAURANTS = [
   // sonora
+  { name: "California Burrito", cuisine: "mexican", town: "sonora",
+    meals: ["breakfast","lunch","dinner"],
+    address: "13796 Mono Way, Sonora, CA 95370",
+    phone: "(209) 692-9070",
+    website: "https://www.eatcaliforniaburrito.com/" },
   { name: "Applebee's", cuisine: "american", town: "sonora",
     meals: ["lunch","dinner","drinks"],
     address: "851 Sanguinetti Rd, Sonora, CA 95370",
