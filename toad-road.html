@@ -943,22 +943,26 @@ function drawToad() {
   ctx.beginPath(); ctx.ellipse(0, T * 0.08, T * 0.36, T * 0.3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#F5E6A8';
   ctx.beginPath(); ctx.ellipse(0, T * 0.18, T * 0.22, T * 0.13, 0, 0, Math.PI * 2); ctx.fill();
-  // Hypnotic ring eyes (yellow / hot pink), same look as the main site.
+  // Hypnotoad eyes, same as the main site: yellow eyeball, wide horizontal
+  // pupil, red-orange rings pulsing out from the pupil.
   const phase = (performance.now() / 400) % 1;
   [-1, 1].forEach(side => {
     const ex = side * T * 0.17, ey = -T * 0.16, er = T * 0.13;
     ctx.save();
     ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.clip();
-    for (let k = 4; k >= 0; k--) {
-      const r = er * (k + phase) / 4;
-      if (r <= 0) continue;
-      ctx.fillStyle = k % 2 ? '#FF3E8F' : '#FFD23F';
-      ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#F1E93A';
+    ctx.fillRect(ex - er, ey - er, er * 2, er * 2);
+    for (let k = 3; k >= 0; k--) {
+      const s = (k + phase) / 3;
+      ctx.fillStyle = k % 2 ? '#FFB020' : '#FF5A1F';
+      ctx.globalAlpha = Math.max(0, 1 - s * 0.7);
+      ctx.beginPath(); ctx.ellipse(ex, ey, er * 0.95 * s, er * 0.5 * s, 0, 0, Math.PI * 2); ctx.fill();
     }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#0F0F1A';
+    ctx.beginPath(); ctx.ellipse(ex, ey, er * 0.6, er * 0.2, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
     ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#0F0F1A';
-    ctx.beginPath(); ctx.arc(ex, ey, T * 0.025, 0, Math.PI * 2); ctx.fill();
   });
   ctx.restore();
 }

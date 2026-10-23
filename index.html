@@ -25,7 +25,7 @@
   --hot-pink: #FF3E8F;
   --yellow: #FFD23F;
   --cream: #FFF8E7;
-  --c1: #FFD23F; --c2: #FF3E8F; /* default eye rings: yellow + hot pink */
+  --c1: #FF5A1F; --c2: #FFB020; /* default pupil rings: red-orange + amber (Hypnotoad) */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -184,61 +184,64 @@ body.eating .mouth-open { animation: showMouth 1.6s linear forwards; }
 .eye-left { top: 20.5%; left: 19%; }
 .eye-right { top: 20.5%; right: 19%; }
 
-/* Hypnotoad-style eyes: crisp, bright concentric rings flowing outward like a
-   hypnosis tunnel (deliberately NOT soft red, so they don't read as bloodshot).
-   --ring slides the ring pattern outward; @property lets CSS animate it smoothly.
-   Browsers without @property just show still rings. */
+/* Hypnotoad-style eyes (matched to the reference): yellow eyeballs with a dark
+   outline, a wide horizontal pupil, and glowing rings pulsing outward from the
+   pupil in oval bands that fade into the yellow. --c1/--c2 color the rings
+   (they change per cuisine). @property lets CSS animate --ring smoothly;
+   browsers without it show still rings. */
 @property --ring {
   syntax: '<percentage>';
   inherits: false;
   initial-value: 0%;
 }
+.eye { box-shadow: 0 0 0 3px var(--ink); }
 .eye-base {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 38% 32%, #FFF7A1 0%, #F1E93A 38%, #C9C51C 78%, #9C9A12 100%);
+}
+.eye-rings {
   position: absolute;
   inset: 0;
   --ring: 0%; /* fallback start value so older browsers still draw the rings */
   background: repeating-radial-gradient(
-    circle at center,
+    ellipse 50% 26% at 50% 50%,
     var(--c1) var(--ring),
-    var(--c1) calc(var(--ring) + 7%),
-    var(--ink) calc(var(--ring) + 7%),
-    var(--ink) calc(var(--ring) + 9%),
-    var(--c2) calc(var(--ring) + 9%),
-    var(--c2) calc(var(--ring) + 16%),
-    var(--ink) calc(var(--ring) + 16%),
-    var(--ink) calc(var(--ring) + 18%)
+    var(--c1) calc(var(--ring) + 13%),
+    var(--c2) calc(var(--ring) + 13%),
+    var(--c2) calc(var(--ring) + 26%)
   );
+  -webkit-mask-image: radial-gradient(ellipse 48% 34% at 50% 50%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 48% 34% at 50% 50%, #000 45%, transparent 100%);
   animation: eyeTunnel 1.6s linear infinite;
 }
 @keyframes eyeTunnel {
   from { --ring: 0%; }
-  to   { --ring: 18%; }
+  to   { --ring: 26%; }
 }
-/* Bold cartoon outline around each eye */
-.eye-rings {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 3px var(--ink);
-}
-
+/* The wide, horizontal pupil, gently pulsing ("wavy") */
 .eye-core {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 14%;
-  height: 14%;
+  width: 56%;
+  height: 20%;
   background: var(--ink);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 3;
-  transition: transform 0.3s;
+  box-shadow: 0 0 0 2px var(--c1), 0 0 8px 2px var(--c1);
+  animation: pupilPulse 1.6s ease-in-out infinite;
+}
+@keyframes pupilPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1, 1); }
+  50% { transform: translate(-50%, -50%) scale(1.08, 0.78); }
 }
 
-body.searching .eye-base { animation-duration: 0.4s; }
-body.searching .eye-core { transform: translate(-50%, -50%) scale(1.4); }
-body.eating .eye-base { animation-duration: 0.8s; }
-body.eating .eye-core { transform: translate(-50%, -50%) scale(1.2); }
+body.searching .eye-rings { animation-duration: 0.4s; }
+body.searching .eye-core { animation-duration: 0.4s; }
+body.eating .eye-rings { animation-duration: 0.8s; }
+body.eating .eye-core { animation-duration: 0.8s; }
 
 /* Food orbit during search */
 .food-orbit {
