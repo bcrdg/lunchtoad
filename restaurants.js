@@ -263,7 +263,6 @@ const LOCAL_RESTAURANTS = [
     phone: "(209) 533-1177",
     website: "http://www.simplydelishshop.com/" },
   { name: "The Candy Vault", cuisine: "dessert", town: "sonora" },
-  { name: "Legends Soda Fountain", cuisine: "dessert", town: "sonora" },
   { name: "Donut Factory", cuisine: "dessert", town: "sonora",
     address: "734 Mono Way, Sonora, CA 95370",
     phone: "(209) 532-1290" },
