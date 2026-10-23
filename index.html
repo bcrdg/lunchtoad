@@ -1002,8 +1002,8 @@ const cuisineMeta = {
   drinks:    { emoji: "🍺", label: "BOTTOMS UP" },
 };
 // Cuisines that appear as "Customize food type" checkboxes.
-// Dessert and drinks places are controlled by "More than lunch?" instead.
-const FOOD_TYPES = Object.keys(cuisineMeta).filter(k => k !== 'dessert' && k !== 'drinks');
+// Coffee, dessert and drinks places are controlled by "More than lunch?" instead.
+const FOOD_TYPES = Object.keys(cuisineMeta).filter(k => !['coffee', 'dessert', 'drinks'].includes(k));
 
 // "More than lunch?" options. A place lists every meal it's good for in `meals`;
 // it's in the pool if ANY of its meals is checked, and it's only ever in the pool once,
@@ -1012,11 +1012,13 @@ const MEALS = {
   lunch:     { emoji: "🌮", label: "LUNCH" },
   breakfast: { emoji: "🥞", label: "BREAKFAST" },
   dinner:    { emoji: "🍽", label: "DINNER" },
-  drinks:    { emoji: "🍹", label: "DRINKS!!" },
+  coffee:    { emoji: "☕", label: "COFFEE & JUICE" },
+  drinks:    { emoji: "🍹", label: "DRINKS!! (21+)" },
   sweets:    { emoji: "🍦", label: "SWEET TOOTH" },
 };
 
 function defaultMeals(r) {
+  if (r.cuisine === 'coffee') return ['coffee'];
   if (r.cuisine === 'dessert') return ['sweets'];
   if (r.cuisine === 'drinks') return ['drinks'];
   if (r.cuisine === 'breakfast') return ['breakfast', 'lunch'];
@@ -1468,6 +1470,7 @@ function reveal() {
 const MEAL_LABELS = {
   dinner:    { emoji: "🍽", label: "DINNER TIME", theme: null },
   breakfast: { emoji: "🥞", label: "RISE & DINE", theme: "breakfast" },
+  coffee:    { emoji: "☕", label: "BREW TIME",   theme: "coffee" },
   drinks:    { emoji: "🍺", label: "BOTTOMS UP",  theme: "drinks" },
   sweets:    { emoji: "🍦", label: "SWEET TOOTH", theme: "dessert" },
 };
@@ -1478,7 +1481,7 @@ function pickLabel(r) {
   const meals = currentMeals();
   const matched = r.meals.filter(m => meals.has(m));
   if (matched.includes('lunch')) return cuisine;
-  const meal = ['dinner', 'breakfast', 'drinks', 'sweets'].find(m => matched.includes(m));
+  const meal = ['dinner', 'breakfast', 'coffee', 'drinks', 'sweets'].find(m => matched.includes(m));
   if (!meal) return cuisine;
   const m = MEAL_LABELS[meal];
   return { emoji: m.emoji, label: m.label, theme: m.theme || r.cuisine };
