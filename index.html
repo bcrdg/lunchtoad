@@ -3220,6 +3220,7 @@ function showDebugPanel() {
         <button data-d="fireworks">PLAY</button></div>
       <div class="row"><span class="lbl">Crown</span><b data-v="king"></b><button data-d="king">TOGGLE</button></div>
       <div class="row"><span class="lbl">Coupons</span><b data-v="coupons"></b>
+        <button data-d="giveCoupon">GIVE TEST COUPON</button>
         <button data-d="couponTest">TEST MODE</button><button data-d="clearCoupons">CLEAR</button></div>
       <div class="row"><span class="lbl">Reset</span>
         <button data-d="resetLook">TOAD LOOK</button><button data-d="resetSpins">SPIN COUNT</button>
@@ -3274,6 +3275,16 @@ function showDebugPanel() {
         else sessionStorage.setItem('lt_coupon_test', '1');
         couponTest = sessionStorage.getItem('lt_coupon_test') === '1';
       } catch (e) {}
+    },
+    giveCoupon() {
+      // Saves the sample coupon now (for the last pick, or a random restaurant) and pops it up.
+      const r = currentPick || restaurants[Math.floor(Math.random() * restaurants.length)];
+      const list = activeCoupons();
+      const entry = { restaurant: r.name, img: SAMPLE_COUPON.img, offer: SAMPLE_COUPON.offer, got: Date.now(), test: true };
+      list.push(entry);
+      storageSet(COUPONS_KEY, JSON.stringify(list));
+      updateCouponButton();
+      showCoupon(entry, true);
     },
     clearCoupons() { storageRemove(COUPONS_KEY); updateCouponButton(); },
     resetLook() {
