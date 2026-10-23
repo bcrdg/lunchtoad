@@ -1819,7 +1819,62 @@ const sfx = (() => {
     ping(ac, 3136, t0 + 0.32, 1.6, 0.05);
   }
 
-  return { whir, chime };
+  // One crunchy bite: a low thump plus a short burst of filtered crackle.
+  function chomp(ac, when, volume) {
+    const thump = ac.createOscillator();
+    const tg = ac.createGain();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(170, when);
+    thump.frequency.exponentialRampToValueAtTime(55, when + 0.09);
+    tg.gain.setValueAtTime(0.0001, when);
+    tg.gain.exponentialRampToValueAtTime(0.35 * volume, when + 0.008);
+    tg.gain.exponentialRampToValueAtTime(0.0001, when + 0.12);
+    thump.connect(tg).connect(out);
+    thump.start(when);
+    thump.stop(when + 0.15);
+
+    const len = 0.11;
+    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate);
+    const data = buf.getChannelData(0);
+    // Uneven, spiky noise sounds more like crunching than smooth hiss
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.3 ? 1 : 0.25);
+    const crunch = ac.createBufferSource();
+    crunch.buffer = buf;
+    const band = ac.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 900 + Math.random() * 700;
+    band.Q.value = 1.2;
+    const cg = ac.createGain();
+    cg.gain.setValueAtTime(0.0001, when);
+    cg.gain.exponentialRampToValueAtTime(0.5 * volume, when + 0.005);
+    cg.gain.exponentialRampToValueAtTime(0.0001, when + len);
+    crunch.connect(band).connect(cg).connect(out);
+    crunch.start(when);
+    crunch.stop(when + len + 0.02);
+  }
+
+  // Munching while the toad eats the food, timed to the 1.6s "eating"
+  // animation (the mouth is open from about 0.65s to 1.25s), then a gulp.
+  function munch() {
+    const ac = audio();
+    if (!ac) return;
+    const t0 = ac.currentTime;
+    [0.68, 0.9, 1.1].forEach((t, i) => chomp(ac, t0 + t + Math.random() * 0.03, 1 - i * 0.15));
+    const gulp = ac.createOscillator();
+    const gg = ac.createGain();
+    const g0 = t0 + 1.32;
+    gulp.type = 'sine';
+    gulp.frequency.setValueAtTime(320, g0);
+    gulp.frequency.exponentialRampToValueAtTime(110, g0 + 0.16);
+    gg.gain.setValueAtTime(0.0001, g0);
+    gg.gain.exponentialRampToValueAtTime(0.22, g0 + 0.02);
+    gg.gain.exponentialRampToValueAtTime(0.0001, g0 + 0.2);
+    gulp.connect(gg).connect(out);
+    gulp.start(g0);
+    gulp.stop(g0 + 0.25);
+  }
+
+  return { whir, chime, munch };
 })();
 
 // ---- Indecisive roller: recipe instead of a restaurant ----
@@ -2010,6 +2065,7 @@ function reveal() {
   void document.body.offsetWidth;
   document.body.classList.add('cuisine-' + meta.theme);
   document.body.classList.add('eating', 'revealed');
+  sfx.munch();
 
   finalFood.textContent = meta.emoji;
   nameDisplay.textContent = chosen.name;
@@ -2162,6 +2218,7 @@ function revealKoks() {
   document.body.classList.remove('searching');
   void document.body.offsetWidth;
   document.body.classList.add('eating', 'revealed');
+  sfx.munch();
 
   finalFood.textContent = '🐟';
   cuisineTag.textContent = 'THE EDGE OF THE EARTH';
