@@ -58,7 +58,7 @@ const LOCAL_RESTAURANTS = [
     phone: "(209) 532-9010",
     website: "https://www.outpostdeli.com/" },
   { name: "The Game Room", cuisine: "american", town: "sonora",
-    meals: ["dinner","drinks"],
+    meals: ["lunch","dinner","drinks"],
     address: "14888 Peaceful Valley Rd, Sonora, CA 95370",
     phone: "(209) 536-4390",
     website: "http://sonoragameroom.com/",
