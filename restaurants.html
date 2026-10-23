@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Every Restaurant — Sonora Lunch Toad</title>
+<meta name="description" content="Every restaurant the Lunch Toad picks from in Sonora, Jamestown, Columbia, Twain Harte, Mi-Wuk and Tuolumne.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0F0F1A;
+  --bg: #1B1147;
+  --bg-deep: #0A0820;
+  --toad-dark: #3E6B2D;
+  --hot-pink: #FF3E8F;
+  --yellow: #FFD23F;
+  --cream: #FFF8E7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Fredoka', sans-serif;
+  background: radial-gradient(ellipse at top, var(--bg) 0%, var(--bg-deep) 80%);
+  background-color: var(--bg-deep);
+  background-attachment: fixed;
+  color: var(--cream);
+  min-height: 100vh;
+  padding: 32px 16px 48px;
+}
+main { max-width: 720px; margin: 0 auto; }
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(2rem, 9vw, 3rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink), 4px 4px 0 var(--hot-pink), 8px 8px 0 var(--ink);
+  letter-spacing: 2px;
+  line-height: 1;
+  text-align: center;
+  transform: rotate(-2deg);
+  margin-bottom: 10px;
+}
+.sub { text-align: center; font-style: italic; opacity: 0.8; margin-bottom: 20px; }
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.search {
+  flex: 1 1 260px;
+  font: 600 1rem 'Fredoka', sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 18px;
+  box-shadow: 4px 4px 0 var(--ink);
+  min-width: 0;
+}
+.search:focus { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.toggle input { width: 20px; height: 20px; accent-color: var(--hot-pink); }
+.count { text-align: center; font-weight: 600; opacity: 0.85; margin: 6px 0 18px; }
+
+.jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 22px; }
+.jump a {
+  font-family: 'Bagel Fat One', cursive;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 50px;
+  padding: 4px 12px;
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+}
+.jump a:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+.town {
+  background: var(--cream);
+  color: var(--ink);
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 18px 20px 8px;
+  margin-bottom: 22px;
+  scroll-margin-top: 16px;
+}
+.town h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  color: var(--hot-pink);
+  margin-bottom: 6px;
+}
+.town h2 small { font-family: 'Fredoka', sans-serif; font-size: 0.85rem; color: var(--ink); opacity: 0.6; font-weight: 600; margin-left: 6px; }
+
+.place { padding: 12px 0; border-top: 2px dashed rgba(15, 15, 26, 0.18); }
+.place:first-of-type { border-top: none; }
+.name { font-family: 'Bagel Fat One', cursive; font-size: 1.15rem; letter-spacing: 0.5px; line-height: 1.15; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(255, 210, 63, 0.5);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+.tag.cuisine { background: rgba(255, 62, 143, 0.18); }
+.tag.chain { background: rgba(15, 15, 26, 0.12); }
+.info { font-size: 0.95rem; font-weight: 500; line-height: 1.5; }
+.info a { color: var(--toad-dark); font-weight: 700; text-decoration: none; }
+.info a:hover { text-decoration: underline; }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.rec {
+  margin-top: 8px;
+  background: rgba(62, 107, 45, 0.12);
+  border-left: 4px solid var(--toad-dark);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.rec b { display: block; }
+.rec span { display: block; font-size: 0.85rem; opacity: 0.8; }
+.empty { text-align: center; font-weight: 600; opacity: 0.8; padding: 24px 0; }
+
+.note { font-size: 0.9rem; opacity: 0.8; text-align: center; line-height: 1.5; margin: 6px 0 0; }
+.note a { color: var(--yellow); font-weight: 700; }
+.back {
+  display: inline-block;
+  margin-top: 18px;
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  border-radius: 50px;
+  padding: 10px 24px;
+  box-shadow: 5px 5px 0 var(--ink);
+  text-decoration: none;
+}
+.back:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+.center { text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <h1>EVERY RESTAURANT</h1>
+  <p class="sub">"Behold, the Toad's entire domain."</p>
+
+  <div class="tools">
+    <input class="search" id="search" type="search" placeholder="Search names, food, towns…" aria-label="Search restaurants" autocomplete="off">
+    <label class="toggle"><input type="checkbox" id="chains" checked> Show chains</label>
+  </div>
+  <p class="count" id="count"></p>
+  <nav class="jump" id="jump" aria-label="Jump to town"></nav>
+
+  <div id="list"></div>
+
+  <p class="note">
+    Missing a spot, or one closed? <a href="./#contact">Tell the Toad.</a><br>
+    Hours and details change, so call ahead if it matters.
+  </p>
+  <p class="center">
+    <a class="back" href="disclaimer.html">← THE FINE PRINT</a>
+    <a class="back" href="./">🐸 BACK TO THE TOAD</a>
+  </p>
+</main>
+
+<script src="restaurants.js"></script>
+<script>
+// Labels match index.html (cuisineMeta, MEALS, TOWNS).
+const CUISINES = {
+  american: "🍔 American", mexican: "🌮 Mexican", italian: "🍕 Italian & Pizza", asian: "🍜 Asian",
+  greek: "🥙 Greek & Mediterranean", bbq: "🍖 BBQ", breakfast: "🥞 Breakfast", sandwich: "🥪 Sandwiches & Deli",
+  hotdog: "🌭 Hot Dogs", coffee: "☕ Coffee & Juice", dessert: "🍦 Sweets", drinks: "🍺 Drinks",
+};
+const MEALS = {
+  lunch: "Lunch", breakfast: "Breakfast", dinner: "Dinner",
+  coffee: "Coffee & Juice", drinks: "Drinks (21+)", sweets: "Sweet Tooth",
+};
+const TOWNS = {
+  sonora: "Sonora", jamestown: "Jamestown", columbia: "Columbia",
+  twainharte: "Twain Harte", miwuk: "Mi-Wuk", tuolumne: "Tuolumne",
+};
+const TOWN_MAP_NAMES = { miwuk: 'Mi-Wuk Village' };
+const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+
+function defaultMeals(r) {
+  if (r.cuisine === 'coffee') return ['coffee'];
+  if (r.cuisine === 'dessert') return ['sweets'];
+  if (r.cuisine === 'drinks') return ['drinks'];
+  if (r.cuisine === 'breakfast') return ['breakfast', 'lunch'];
+  return ['lunch'];
+}
+function mapUrl(r) {
+  const q = encodeURIComponent(`${r.name}, ${r.address || (TOWN_MAP_NAMES[r.town] || TOWNS[r.town]) + ', CA'}`);
+  return IS_APPLE ? 'https://maps.apple.com/?q=' + q : 'https://www.google.com/maps/search/?api=1&query=' + q;
+}
+
+const ALL = [
+  ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })),
+  ...CHAIN_RESTAURANTS.map(r => ({ ...r, chain: true })),
+].map(r => ({ ...r, meals: r.meals && r.meals.length ? r.meals : defaultMeals(r) }))
+ .sort((a, b) => a.name.localeCompare(b.name));
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function link(href, text, external) {
+  const a = el('a', null, text);
+  a.href = href;
+  if (external) { a.target = '_blank'; a.rel = 'noopener'; }
+  return a;
+}
+
+function placeCard(r) {
+  const p = el('div', 'place');
+  p.appendChild(el('div', 'name', r.name));
+
+  const tags = el('div', 'tags');
+  tags.appendChild(el('span', 'tag cuisine', CUISINES[r.cuisine] || r.cuisine));
+  r.meals.forEach(m => tags.appendChild(el('span', 'tag', MEALS[m] || m)));
+  if (r.chain) tags.appendChild(el('span', 'tag chain', '🏢 Chain'));
+  p.appendChild(tags);
+
+  const info = el('div', 'info');
+  if (r.address) info.appendChild(el('div', null, r.address));
+  const links = el('div', 'links');
+  links.appendChild(link(mapUrl(r), '📍 Directions', true));
+  const digits = String(r.phone || '').replace(/\D/g, '').slice(-10);
+  if (digits.length === 10) {
+    links.appendChild(link('tel:+1' + digits, `📞 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`));
+  }
+  if (r.website) links.appendChild(link(r.website, '🌐 Website', true));
+  info.appendChild(links);
+  p.appendChild(info);
+
+  if (r.rec && r.rec.dish) {
+    const rec = el('div', 'rec');
+    rec.appendChild(el('div', null, (r.rec.by === 'toad' ? '🐸 The Toad' : r.name) + ' recommends:'));
+    rec.appendChild(el('b', null, r.rec.dish));
+    if (r.rec.desc) rec.appendChild(el('span', null, r.rec.desc));
+    p.appendChild(rec);
+  }
+  return p;
+}
+
+const searchBox = document.getElementById('search');
+const chainsBox = document.getElementById('chains');
+
+function render() {
+  const words = searchBox.value.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = ALL.filter(r => {
+    if (!chainsBox.checked && r.chain) return false;
+    if (!words.length) return true;
+    const hay = [r.name, CUISINES[r.cuisine], TOWNS[r.town], r.address, r.meals.map(m => MEALS[m]).join(' '),
+                 r.rec && r.rec.dish].join(' ').toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+
+  const list = document.getElementById('list');
+  const jump = document.getElementById('jump');
+  list.innerHTML = '';
+  jump.innerHTML = '';
+  document.getElementById('count').textContent =
+    shown.length === ALL.length ? `${ALL.length} restaurants` : `${shown.length} of ${ALL.length} restaurants`;
+
+  if (!shown.length) {
+    list.appendChild(el('p', 'empty', 'The Toad found nothing. Try another word.'));
+    return;
+  }
+  Object.keys(TOWNS).forEach(key => {
+    const inTown = shown.filter(r => r.town === key);
+    if (!inTown.length) return;
+    const section = el('section', 'town');
+    section.id = key;
+    const h = el('h2', null, TOWNS[key]);
+    h.appendChild(el('small', null, inTown.length + (inTown.length === 1 ? ' place' : ' places')));
+    section.appendChild(h);
+    inTown.forEach(r => section.appendChild(placeCard(r)));
+    list.appendChild(section);
+    jump.appendChild(link('#' + key, TOWNS[key]));
+  });
+}
+
+searchBox.addEventListener('input', render);
+chainsBox.addEventListener('change', render);
+render();
+</script>
+</body>
+</html>
