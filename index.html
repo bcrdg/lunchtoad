@@ -1438,10 +1438,10 @@ function reveal() {
   document.body.classList.remove('searching');
 
   const chosen = drawFromBag(getActiveRestaurants());
-  const meta = cuisineMeta[chosen.cuisine];
+  const meta = pickLabel(chosen);
 
   void document.body.offsetWidth;
-  document.body.classList.add('cuisine-' + chosen.cuisine);
+  document.body.classList.add('cuisine-' + meta.theme);
   document.body.classList.add('eating', 'revealed');
 
   finalFood.textContent = meta.emoji;
@@ -1458,6 +1458,30 @@ function reveal() {
     lunchBtn.disabled = false;
     lunchBtn.textContent = 'AGAIN, TOAD';
   }, 1700);
+}
+
+// ---- Result label ----
+// The label follows WHY a place is in the pool. If it matched Lunch (or it's a
+// dessert/drinks spot), show its cuisine ("BURGER VIBES"). If it only got in through
+// another meal box, show that meal instead, so a steakhouse picked under Drinks
+// says "BOTTOMS UP", not "BURGER VIBES".
+const MEAL_LABELS = {
+  dinner:    { emoji: "🍽", label: "DINNER TIME", theme: null },
+  breakfast: { emoji: "🥞", label: "RISE & DINE", theme: "breakfast" },
+  drinks:    { emoji: "🍺", label: "BOTTOMS UP",  theme: "drinks" },
+  sweets:    { emoji: "🍦", label: "SWEET TOOTH", theme: "dessert" },
+};
+
+function pickLabel(r) {
+  const cuisine = { ...cuisineMeta[r.cuisine], theme: r.cuisine };
+  if (r.cuisine === 'dessert' || r.cuisine === 'drinks') return cuisine;
+  const meals = currentMeals();
+  const matched = r.meals.filter(m => meals.has(m));
+  if (matched.includes('lunch')) return cuisine;
+  const meal = ['dinner', 'breakfast', 'drinks', 'sweets'].find(m => matched.includes(m));
+  if (!meal) return cuisine;
+  const m = MEAL_LABELS[meal];
+  return { emoji: m.emoji, label: m.label, theme: m.theme || r.cuisine };
 }
 
 // ---- Picking: shuffle bag + crypto randomness ----
