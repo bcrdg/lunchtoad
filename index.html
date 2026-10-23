@@ -389,7 +389,7 @@ body.revealed .result-card {
 }
 
 .footer-note {
-  margin-top: 14px;
+  margin-top: 10px;
   font-size: 0.85rem;
   opacity: 0.7;
   font-weight: 500;
@@ -878,9 +878,6 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
 
   <button class="lunch-btn" id="lunchBtn">FIND MY LUNCH</button>
 
-  <div class="footer-note">
-    Lunch Toad chooses from <span id="restCount">--</span> restaurants
-  </div>
 
   <div class="warning-msg" id="warningMsg">⚠ NOTHING TO PICK FROM, PICKY ⚠</div>
 
@@ -891,6 +888,9 @@ body.cuisine-dessert   { --c1: #FF6FB5; --c2: #FFFFFF; }
   <div class="options-panel hidden" id="optionsPanel">
     <div class="options-label">WHERE ARE YOU WILLING TO DRIVE?</div>
     <div class="town-filters" id="townFilters"></div>
+    <div class="footer-note">
+      <span id="restCount">--</span> <span id="restWord">restaurants</span> selected
+    </div>
 
     <div class="controls-row">
       <label class="picky-toggle">
@@ -1053,6 +1053,7 @@ function getActiveRestaurants() {
 function updateCount() {
   const active = getActiveRestaurants();
   document.getElementById('restCount').textContent = active.length;
+  document.getElementById('restWord').textContent = active.length === 1 ? 'restaurant' : 'restaurants';
   const warning = document.getElementById('warningMsg');
   warning.textContent = activeTowns.size === 0
     ? '⚠ PICK AT LEAST ONE TOWN ⚠'
