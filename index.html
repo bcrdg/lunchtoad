@@ -2779,7 +2779,11 @@ function countVisit() {
       const n = parseInt(forced, 10);
       setCookie(VISITS_COOKIE, String(n), 365);
       try { sessionStorage.setItem(VISIT_COUNTED_KEY, '1'); } catch (e) {}
-      if (n < 10) storageRemove('lt_unlock10_seen'); // see CELEBRATED_KEY below
+      // Count milestones at or below N as already celebrated, so the next one
+      // (e.g. 10 after ?visits=9, 20 after ?visits=19) gets its fireworks.
+      const passed = [5, 10, 20, 30, 50].filter(m => m <= n); // keep in sync with MILESTONES
+      storageSet('lt_celebrated', String(passed.length ? passed[passed.length - 1] : 0)); // see CELEBRATED_KEY below
+      storageRemove('lt_unlock10_seen'); // old flag
       params.delete('visits');
       const rest = params.toString();
       history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
@@ -2812,9 +2816,17 @@ function applyUnlocks() {
   UNLOCKS.forEach(u => { if (visitCount >= u.at) { try { u.unlock(); } catch (e) {} } });
 }
 
-// ---- 10 visits: secret features + a one-time fireworks celebration ----
+// ---- Visit milestones: fireworks at 5, 10, 20, 30 and 50 visits; secret features at 10 ----
 const SECRET_AT = 10;
-const CELEBRATED_KEY = 'lt_unlock10_seen';
+// Each milestone gets fireworks once per device, with its own message.
+const MILESTONES = {
+  5:  'The Toad remembers your face. Welcome back, regular.',
+  10: '', // the "unlocked new features" message
+  20: 'The Toad has started telling the other toads about you.',
+  30: 'The Toad has named a lily pad after you.',
+  50: 'Fifty visits! The Toad weeps tiny toad tears. At this point he works for you.',
+};
+const CELEBRATED_KEY = 'lt_celebrated'; // highest milestone that has had its fireworks
 const EYE_COLORS = {
   hypno: ['#FF5A1F', '#FFB020'],
   toxic: ['#39FF14', '#0B6623'],
@@ -2845,25 +2857,40 @@ UNLOCKS.push({
       applyEyeColor(eyeColor);
       saveFilters();
     });
-    if (storageGet(CELEBRATED_KEY) !== '1') {
-      storageSet(CELEBRATED_KEY, '1');
-      celebrateUnlock();
-    }
   },
 });
 
-function celebrateUnlock() {
+// If someone skips past a milestone (edited cookie, or the ?visits= test link),
+// only the highest one they've reached is celebrated.
+function celebrateMilestones() {
+  const reached = Object.keys(MILESTONES).map(Number).filter(m => m <= visitCount);
+  if (!reached.length) return;
+  const milestone = Math.max(...reached);
+  let done = parseInt(storageGet(CELEBRATED_KEY) || '0', 10) || 0;
+  if (!done && storageGet('lt_unlock10_seen') === '1') done = 10; // from before milestones existed
+  if (milestone <= done) return;
+  storageSet(CELEBRATED_KEY, String(milestone));
+  storageRemove('lt_unlock10_seen');
+  celebrateUnlock(milestone);
+}
+
+function celebrateUnlock(milestone) {
+  const first = milestone === SECRET_AT;
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!calm) fireworks(4.5);
   const toast = document.createElement('div');
   toast.className = 'unlock-toast';
   toast.setAttribute('role', 'dialog');
-  toast.setAttribute('aria-label', 'New features unlocked');
-  toast.innerHTML =
-    `<h2>🎉 YOU'VE UNLOCKED NEW FEATURES! 🎉</h2>
-     <p>${visitCount} visits! The Toad sees your loyalty. Look for the secret features in Lunch Options.</p>
-     <button type="button" data-act="show">SHOW ME</button>
-     <button type="button" class="plain" data-act="close">LATER</button>`;
+  toast.setAttribute('aria-label', first ? 'New features unlocked' : milestone + ' visits');
+  const line = MILESTONES[milestone] || 'The Toad is honored by your loyalty.';
+  toast.innerHTML = first
+    ? `<h2>🎉 YOU'VE UNLOCKED NEW FEATURES! 🎉</h2>
+       <p>${milestone} visits! The Toad sees your loyalty. Look for the secret features in Lunch Options.</p>
+       <button type="button" data-act="show">SHOW ME</button>
+       <button type="button" class="plain" data-act="close">LATER</button>`
+    : `<h2>🎉 ${milestone} VISITS! 🎉</h2>
+       <p>${line}</p>
+       <button type="button" data-act="close">THANKS, TOAD</button>`;
   toast.addEventListener('click', e => {
     const act = e.target.dataset && e.target.dataset.act;
     if (!act) return;
@@ -2980,6 +3007,7 @@ function init() {
   updateCount();
   updateCouponButton();
   applyUnlocks();
+  celebrateMilestones();
 
   // Links like sonoralunchtoad.com/#contact (used by disclaimer.html) open the contact form.
   if (location.hash === '#contact') {
