@@ -1,0 +1,171 @@
+// Lunch Toad API: a Cloudflare Worker backed by Workers KV.
+//
+// Holds the shared Toad Road high-score board so the website itself has no
+// secrets in it.
+//
+//   GET  /scores   -> { scores: [...] }            anyone (allowed sites only, via CORS)
+//   POST /scores   -> add one score                 anyone; the Worker checks it
+//        body: { name, score, level }
+//   PUT  /scores   -> replace the whole board       needs header X-Edit-Key = secret EDIT_KEY
+//        body: { scores: [...] }
+//
+// KV binding: LUNCH_KV. Board stored under the key "scores".
+// Secret: EDIT_KEY (set with `wrangler secret put EDIT_KEY`, never in a file).
+
+const ALLOWED_ORIGINS = [
+  'https://sonoralunchtoad.com',
+  'https://www.sonoralunchtoad.com',
+  'https://bcrdg.github.io',
+];
+const BOARD_KEY = 'scores';
+const BOARD_SIZE = 10;
+const MAX_PUT_BYTES = 200 * 1024;
+const MAX_POST_BYTES = 1024;
+const MAX_SCORE = 1e7;
+const SAVES_PER_MINUTE = 5; // per IP address
+
+// Same name rules as toad-road.html (kept in sync by hand).
+const NAME_MAX = 10;
+const NOT_ALLOWED = ['ASS', 'FUK', 'FUC', 'FCK', 'SEX', 'CUM', 'DIK', 'DIC', 'FAG', 'NIG', 'KKK', 'TIT', 'TITS', 'POO', 'PEE', 'WTF', 'GAY', 'JEW', 'NAZ', 'HOE', 'HO', 'ANUS', 'ARSE', 'RAPE', 'SPIC'];
+const NOT_ALLOWED_INSIDE = ['FUCK', 'FUK', 'FCK', 'PHUK', 'SHIT', 'SH1T', 'CUNT', 'NIGG', 'N1GG', 'NIGA', 'FAGG', 'FAG0',
+  'DICK', 'D1CK', 'COCK', 'C0CK', 'PUSSY', 'BITCH', 'B1TCH', 'NAZI', 'HITLER', 'KKK', 'PENIS', 'VAGINA', 'SLUT', 'WHORE',
+  'RAPIST', 'BOOB', 'TWAT', 'WANK', 'JIZZ', 'CUMS', 'CUMM', 'ASSHOLE', 'DUMBASS', 'JACKASS', 'BADASS', 'SEXY', 'SEXX',
+  'PORN', 'RETARD', 'TRANNY', 'DYKE', 'KIKE', 'CHINK', 'WETBACK', 'MOLEST', 'PEDO', 'KILLYOU'];
+
+function nameBlocked(name) {
+  const n = name.toUpperCase();
+  const plain = n.replace(/0/g, 'O').replace(/1/g, 'I').replace(/3/g, 'E').replace(/4/g, 'A').replace(/5/g, 'S').replace(/7/g, 'T');
+  return [n, plain].some(v => NOT_ALLOWED.includes(v) || NOT_ALLOWED_INSIDE.some(w => v.includes(w)));
+}
+
+function cleanEntry(e) {
+  if (!e || typeof e.name !== 'string') return null;
+  const name = e.name.toUpperCase();
+  if (!/^[A-Z0-9]{1,10}$/.test(name) || name.length > NAME_MAX || nameBlocked(name)) return null;
+  if (!Number.isInteger(e.score) || e.score < 0 || e.score >= MAX_SCORE) return null;
+  const level = Math.max(1, Math.min(999, parseInt(e.level, 10) || 1));
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(e.date || '')) ? e.date : todayPacific();
+  return { name, score: e.score, level, date };
+}
+
+function cleanBoard(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(cleanEntry)
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, BOARD_SIZE);
+}
+
+function todayPacific() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+}
+
+function corsHeaders(origin) {
+  const h = { 'Vary': 'Origin' };
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    h['Access-Control-Allow-Origin'] = origin;
+    h['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS';
+    h['Access-Control-Allow-Headers'] = 'Content-Type, X-Edit-Key';
+    h['Access-Control-Max-Age'] = '86400';
+  }
+  return h;
+}
+
+function json(data, status, origin, extra) {
+  return new Response(JSON.stringify(data), {
+    status: status || 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...corsHeaders(origin), ...(extra || {}) },
+  });
+}
+
+// Reads the body as text, refusing anything over `limit` bytes.
+async function readBody(request, limit) {
+  const declared = parseInt(request.headers.get('Content-Length') || '0', 10);
+  if (declared > limit) return { tooBig: true };
+  const buf = await request.arrayBuffer();
+  if (buf.byteLength > limit) return { tooBig: true };
+  try { return { data: JSON.parse(new TextDecoder().decode(buf)) }; }
+  catch (e) { return { invalid: true }; }
+}
+
+// Constant-time string compare, so the key can't be guessed by timing.
+async function keyMatches(given, secret) {
+  if (!given || !secret) return false;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', enc.encode(given)), crypto.subtle.digest('SHA-256', enc.encode(secret))]);
+  const x = new Uint8Array(a), y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+async function loadBoard(env) {
+  try { return cleanBoard((await env.LUNCH_KV.get(BOARD_KEY, 'json') || {}).scores); }
+  catch (e) { return []; }
+}
+
+// Light rate limit: a few saves per minute per IP. KV is eventually consistent,
+// so this is a speed bump, not a wall.
+async function rateLimited(env, request) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const key = 'rl:' + ip + ':' + Math.floor(Date.now() / 60000);
+  const count = parseInt(await env.LUNCH_KV.get(key) || '0', 10);
+  if (count >= SAVES_PER_MINUTE) return true;
+  await env.LUNCH_KV.put(key, String(count + 1), { expirationTtl: 120 });
+  return false;
+}
+
+export default {
+  async fetch(request, env) {
+    const origin = request.headers.get('Origin') || '';
+    const url = new URL(request.url);
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: ALLOWED_ORIGINS.includes(origin) ? 204 : 403, headers: corsHeaders(origin) });
+    }
+    // Browsers on other sites are refused. (Requests with no Origin, like curl,
+    // still work for reads; writes from them are still checked like any other.)
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return json({ error: 'origin not allowed' }, 403, origin);
+    }
+
+    if (url.pathname === '/' || url.pathname === '') {
+      return json({ ok: true, service: 'lunch-toad', endpoints: ['GET /scores', 'POST /scores', 'PUT /scores'] }, 200, origin);
+    }
+
+    if (url.pathname === '/scores') {
+      if (request.method === 'GET') {
+        return json({ scores: await loadBoard(env) }, 200, origin);
+      }
+
+      if (request.method === 'POST') {
+        const body = await readBody(request, MAX_POST_BYTES);
+        if (body.tooBig) return json({ error: 'too big' }, 413, origin);
+        if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
+        const entry = cleanEntry({ ...body.data, date: todayPacific() });
+        if (!entry) return json({ error: 'score not accepted' }, 422, origin);
+        if (await rateLimited(env, request)) return json({ error: 'slow down' }, 429, origin, { 'Retry-After': '60' });
+        const board = cleanBoard([...(await loadBoard(env)), entry]);
+        await env.LUNCH_KV.put(BOARD_KEY, JSON.stringify({ scores: board }));
+        return json({ scores: board, entry }, 200, origin);
+      }
+
+      if (request.method === 'PUT') {
+        if (!(await keyMatches(request.headers.get('X-Edit-Key'), env.EDIT_KEY))) {
+          return json({ error: 'forbidden' }, 403, origin);
+        }
+        const body = await readBody(request, MAX_PUT_BYTES);
+        if (body.tooBig) return json({ error: 'too big' }, 413, origin);
+        if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
+        if (!body.data || !Array.isArray(body.data.scores)) return json({ error: 'expected { "scores": [...] }' }, 400, origin);
+        const board = cleanBoard(body.data.scores);
+        await env.LUNCH_KV.put(BOARD_KEY, JSON.stringify({ scores: board }));
+        return json({ scores: board }, 200, origin);
+      }
+
+      return json({ error: 'method not allowed' }, 405, origin, { 'Allow': 'GET, POST, PUT, OPTIONS' });
+    }
+
+    return json({ error: 'not found' }, 404, origin);
+  },
+};

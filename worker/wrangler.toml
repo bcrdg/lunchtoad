@@ -1,0 +1,10 @@
+# Lunch Toad API Worker. Deploy from this folder with:  npx wrangler deploy
+# The edit key is a Worker secret (npx wrangler secret put EDIT_KEY), never stored in a file.
+name = "lunch-toad"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "LUNCH_KV"
+id = "9d38890e58f443f6b5a8375c4ebae6b4"

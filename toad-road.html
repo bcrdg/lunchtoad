@@ -286,7 +286,6 @@ function setKingCookie() {
 const TIME_PER_LIFE = 45;
 const START_LIVES = 5;
 const BEST_KEY = 'lt_toadroad_best';
-const TILE_NOISE = 'T3FMTFJ6anhHNTBnRUlE';
 
 // Default speeds (tiles/sec, negative = left) and spacing for each section.
 const RIDE_SPEEDS = [0.8, -1.0, 1.2, -0.9, 1.0];
@@ -659,21 +658,18 @@ function update(dt) {
 }
 
 // ---------------------------------------------------------------------------
-// High scores: a shared top-10 board stored in a JSONbin.io bin.
+// High scores: a shared top-10 board kept by the Lunch Toad Cloudflare Worker
+// (source in worker/ in this repo). There are no keys in this page: players
+// POST one score, and the Worker checks the name and score and keeps the top 10.
 //
-// 🥪 Hey, you found the key! Yes, it's sitting here in public on purpose. It's a
-// JSONbin "Access Key" that can only read and update this one high-score bin.
-// If you found it: congrats, you're our kind of nerd. Please don't wreck the
-// leaderboard. Instead, tell us through the contact form on sonoralunchtoad.com
-// and the Toad will buy you a sandwich. Seriously. Any sandwich in Sonora.
+// 🥪 Poking around the source? Respect. If you find a way to break the board,
+// tell us through the contact form on sonoralunchtoad.com instead, and the Toad
+// will buy you a sandwich. Seriously. Any sandwich in Sonora.
 //
-// If JSONBIN_BIN_ID is blank (or JSONbin is down), the board falls
-// back to this device only (localStorage).
+// If the Worker can't be reached (or SCORES_URL is blank), the board falls back
+// to this device only (localStorage), so the game always works.
 // ---------------------------------------------------------------------------
-const JSONBIN_BIN_ID = '6adad854ffd5d160538476d8';
-const BOARD_SALT = 'UzNJN1B3VjMkMDEkYTIk';
-function boardToken() { return atob(TILE_NOISE + RIPPLE_SEED + SPARKLE_MAP + BOARD_SALT).split('').reverse().join(''); }
-const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+const SCORES_URL = 'https://lunch-toad.brian-423.workers.dev/scores';
 const BOARD_SIZE = 10;
 const LOCAL_BOARD_KEY = 'lt_toadroad_board';
 const NAME_MAX = 10; // high-score names: 1-10 letters/numbers
@@ -693,7 +689,7 @@ function nameBlocked(name) {
 }
 function cleanName(value) { return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, NAME_MAX); }
 
-function onlineBoard() { return !!JSONBIN_BIN_ID; }
+function onlineBoard() { return !!SCORES_URL; }
 
 function cleanBoard(list) {
   return (Array.isArray(list) ? list : [])
@@ -709,13 +705,14 @@ function localBoard() {
 
 async function loadBoard() {
   if (!onlineBoard()) return localBoard();
-  const res = await fetch(JSONBIN_URL + '/latest', {
-    headers: { 'X-Access-Key': boardToken(), 'X-Bin-Meta': 'false' },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('board ' + res.status);
-  const data = await res.json();
-  return cleanBoard(data.scores);
+  try {
+    const res = await fetch(SCORES_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('board ' + res.status);
+    const data = await res.json();
+    return cleanBoard(data.scores);
+  } catch (e) {
+    return localBoard(); // Worker unreachable: show this device's scores instead
+  }
 }
 
 async function saveToBoard(entry) {
@@ -723,16 +720,21 @@ async function saveToBoard(entry) {
   const mine = cleanBoard([...localBoard(), entry]);
   try { localStorage.setItem(LOCAL_BOARD_KEY, JSON.stringify(mine)); } catch (e) {}
   if (!onlineBoard()) return mine;
-  // Read-modify-write. Two people saving in the same second could clobber each
-  // other; for a toad game, that's fine.
-  const board = cleanBoard([...(await loadBoard()), entry]);
-  const res = await fetch(JSONBIN_URL, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Access-Key': boardToken() },
-    body: JSON.stringify({ scores: board }),
-  });
+  let res;
+  try {
+    res = await fetch(SCORES_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: entry.name, score: entry.score, level: entry.level }),
+    });
+  } catch (e) {
+    return mine; // Worker unreachable: the score is saved on this device
+  }
+  if (res.status === 429) throw new Error('slow');
   if (!res.ok) throw new Error('save ' + res.status);
-  return board;
+  const data = await res.json();
+  if (data.entry && data.entry.date) entry.date = data.entry.date; // the Worker stamps the date (Pacific time)
+  return cleanBoard(data.scores);
 }
 
 function qualifies(board, s) {
@@ -761,8 +763,9 @@ function renderBoard(el, board, highlight) {
   });
 }
 
-function boardError(el) {
-  el.innerHTML = '<li class="board-empty">Leaderboard is napping. Try again later.</li>';
+function boardError(el, err) {
+  el.innerHTML = '<li class="board-empty">' +
+    (err && err.message === 'slow' ? 'Whoa, slow down! Try saving again in a minute.' : 'Leaderboard is napping. Try again later.') + '</li>';
 }
 
 async function refreshStartBoard() {
@@ -820,7 +823,7 @@ document.getElementById('initialsForm').addEventListener('submit', async e => {
     renderBoard(boardEl, board, board.find(x => x.name === entry.name && x.score === entry.score && x.date === entry.date));
     refreshStartBoard();
   } catch (err) {
-    boardError(boardEl);
+    boardError(boardEl, err);
   } finally {
     btn.disabled = false;
     btn.textContent = 'SAVE';
@@ -835,7 +838,6 @@ function rr(x, y, w, h, r) {
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
 }
-const SPARKLE_MAP = 'VU9OVDlGanVtemE4YVRK';
 function emoji(ch, cx, cy, size, flip) {
   ctx.save();
   ctx.translate(cx, cy);
@@ -857,7 +859,6 @@ function label(text, row) {
 }
 function band(row, rows, color) { ctx.fillStyle = color; ctx.fillRect(0, row * T, COLS * T, rows * T); }
 
-const RIPPLE_SEED = 'eHpvczFkeGxyN1ZjVmc5';
 function drawRideBg() {
   const W = COLS * T, now = performance.now();
   band(1, 5, L.colors.ride);

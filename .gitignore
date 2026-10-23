@@ -1,1 +1,5 @@
 handoff.md
+.env
+.dev.vars
+.wrangler/
+node_modules/
