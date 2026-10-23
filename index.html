@@ -795,6 +795,61 @@ body.indecisive .warning-msg { display: none; }
 .recipe-ingredients li + li, .recipe-steps li + li { margin-top: 4px; }
 .back-to-road { margin-top: 22px; }
 
+.share-pick { cursor: pointer; padding: 8px 12px; font-size: 1rem; line-height: 1.2; }
+#sharePickStatus:empty { display: none; }
+
+.recipe-share { margin-top: 18px; text-align: center; }
+.share-btn {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #FFFFFF;
+  background: var(--hot-pink);
+  border: 3px solid var(--ink);
+  border-radius: 50px;
+  padding: 8px 20px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.share-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.share-menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.share-menu[hidden] { display: none; }
+.share-menu button, .share-menu a {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: #FFFFFF;
+  border: 2px solid var(--ink);
+  border-radius: 50px;
+  padding: 6px 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.share-menu button:hover, .share-menu a:hover { background: var(--yellow); }
+.share-status { font-size: 0.85rem; font-weight: 600; min-height: 1.2em; margin-top: 6px; color: var(--toad-dark); }
+
+/* Printing a recipe: just the photo and the recipe card */
+@media print {
+  body.indecisive { background: #FFFFFF; color: #000000; padding: 0; }
+  body.indecisive .bg-stars,
+  body.indecisive h1,
+  body.indecisive .tagline,
+  body.indecisive .recipe-share,
+  body.indecisive .back-to-road,
+  body.indecisive .options-panel,
+  body.indecisive .modal-overlay { display: none !important; }
+  body.indecisive .recipe-photo-wrap { transform: none; box-shadow: none; width: 320px; }
+  body.indecisive .recipe-card { box-shadow: none; max-width: none; }
+  body.indecisive .recipe-credit { color: #000000; }
+}
+
 /* KOKS easter egg: buttons vanish; the fate page also hides the result's extras */
 body.koksed .lunch-btn,
 body.koksed .options-toggle,
@@ -980,8 +1035,8 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
     </div>
     <p class="recipe-credit" id="recipeCredit"></p>
     <div class="recipe-card">
-      <div class="cuisine-tag">🫵 INDECISIVE! 🫵</div>
-      <p class="recipe-verdict">
+      <div class="cuisine-tag" id="recipeTag">🫵 INDECISIVE! 🫵</div>
+      <p class="recipe-verdict" id="recipeVerdict">
         You spun too many times. Your punishment (and your reward): cook something new from somewhere new.
       </p>
       <h2 class="recipe-name" id="recipeName"></h2>
@@ -992,6 +1047,16 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
       <ul class="recipe-ingredients" id="recipeIngredients"></ul>
       <h3>Steps</h3>
       <ol class="recipe-steps" id="recipeSteps"></ol>
+      <div class="recipe-share">
+        <button class="share-btn" id="shareRecipe">📤 Send this recipe</button>
+        <div class="share-menu" id="shareMenu" hidden>
+          <button type="button" data-share="copy">📋 Copy</button>
+          <a data-share="email" id="shareEmail">✉️ Email</a>
+          <a data-share="sms" id="shareSms">💬 Text</a>
+          <button type="button" data-share="print">🖨 Print</button>
+        </div>
+        <div class="share-status" id="shareStatus" role="status"></div>
+      </div>
     </div>
     <button class="options-toggle back-to-road" id="backToRoad">🐸 BACK TO TOAD ROAD</button>
   </section>
@@ -1006,7 +1071,9 @@ body.cuisine-drinks    { --c1: #F5A623; --c2: #7A3B00; }
         <a class="map-link" id="mapLink" target="_blank" rel="noopener">📍 Directions</a>
         <a class="map-link" id="phoneLink" hidden>📞 Call</a>
         <a class="map-link" id="webLink" target="_blank" rel="noopener" hidden>🌐 Website</a>
+        <button type="button" class="map-link share-pick" id="sharePick" title="Share this pick" aria-label="Share this pick">📤</button>
       </div>
+      <div class="share-status" id="sharePickStatus" role="status"></div>
       <a class="map-alt" id="mapAlt" target="_blank" rel="noopener"></a>
     </div>
     <div class="rec hidden" id="recBox">
@@ -1490,6 +1557,7 @@ function showMapLinks(r) {
     phoneLink.textContent = `📞 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
   }
 
+  document.getElementById('sharePick').hidden = false;
   const webLink = document.getElementById('webLink');
   webLink.hidden = !/^https?:\/\//i.test(r.website || '');
   if (!webLink.hidden) webLink.href = r.website;
@@ -1610,10 +1678,107 @@ function fillList(el, items) {
   });
 }
 
-function revealRecipe() {
+// ---- Sharing the current restaurant pick ----
+let currentPick = null;
+
+document.getElementById('sharePick').addEventListener('click', async () => {
+  const r = currentPick;
+  if (!r) return;
+  const status = document.getElementById('sharePickStatus');
+  status.textContent = '';
+  const mapUrl = googleMapsUrl(r); // works for everyone, Apple or not
+  const text = [
+    `The Lunch Toad says we're eating at ${r.name} 🐸`,
+    r.address || TOWNS[r.town],
+    r.phone || '',
+    mapUrl,
+  ].filter(Boolean).join('\n');
+  const site = location.origin + '/';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: r.name + ' — picked by the Lunch Toad', text, url: site });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text + '\n\nSpin your own: ' + site);
+    status.textContent = 'Copied! Paste it in a text or chat.';
+  } catch (e) {
+    status.textContent = 'Couldn\'t copy on this browser.';
+  }
+});
+
+// ---- Sharing a recipe ----
+let currentRecipe = null;
+
+function recipeUrl(r) {
+  return location.origin + location.pathname + '?recipe=' + r.id;
+}
+
+function recipeText(r) {
+  return [
+    r.name + ' (' + r.region + ')',
+    r.why,
+    '⏱ ' + r.time + ' · Serves ' + r.serves,
+    '',
+    'INGREDIENTS',
+    ...r.ingredients.map(i => '- ' + i),
+    '',
+    'STEPS',
+    ...r.steps.map((s, n) => (n + 1) + '. ' + s),
+    '',
+    'From the Lunch Toad 🐸',
+  ].join('\n');
+}
+
+function setShareStatus(msg) {
+  document.getElementById('shareStatus').textContent = msg;
+}
+
+document.getElementById('shareRecipe').addEventListener('click', async () => {
+  const r = currentRecipe;
+  if (!r) return;
+  const url = recipeUrl(r);
+  const title = r.name + ' — a Lunch Toad recipe';
+  const text = recipeText(r);
+  setShareStatus('');
+  // Native share sheet (phones, Safari, Edge/Chrome on Windows & ChromeOS).
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // they closed the share sheet
+    }
+  }
+  // Fallback menu: copy / email / text / print.
+  const body = text + '\n\n' + url;
+  document.getElementById('shareEmail').href =
+    'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+  document.getElementById('shareSms').href = 'sms:?&body=' + encodeURIComponent(r.name + ' recipe from the Lunch Toad: ' + url);
+  document.getElementById('shareMenu').hidden = false;
+});
+
+document.querySelector('#shareMenu [data-share="copy"]').addEventListener('click', async () => {
+  const r = currentRecipe;
+  try {
+    await navigator.clipboard.writeText(recipeText(r) + '\n\n' + recipeUrl(r));
+    setShareStatus('Copied! Paste it anywhere.');
+  } catch (e) {
+    setShareStatus('Couldn\'t copy. Try Email or Text instead.');
+  }
+});
+document.querySelector('#shareMenu [data-share="print"]').addEventListener('click', () => window.print());
+
+function revealRecipe(chosen) {
   clearInterval(cycleInterval);
   document.body.classList.remove('searching');
-  const r = drawRecipe();
+  const r = chosen && chosen.id ? chosen : drawRecipe();
+  currentRecipe = r;
+  document.getElementById('shareMenu').hidden = true;
+  setShareStatus('');
 
   const photo = document.getElementById('recipePhoto');
   photo.src = r.photo.src;
@@ -1640,8 +1805,15 @@ function revealRecipe() {
   fillList(document.getElementById('recipeIngredients'), r.ingredients);
   fillList(document.getElementById('recipeSteps'), r.steps);
 
+  // Opened from a shared link -> friendlier wording than the indecisive verdict.
+  const shared = !!(chosen && chosen.id);
+  document.getElementById('recipeTag').textContent = shared ? '📬 SPECIAL DELIVERY 📬' : '🫵 INDECISIVE! 🫵';
+  document.getElementById('recipeVerdict').textContent = shared
+    ? 'Someone sent you a recipe from the Lunch Toad. Cook something new from somewhere new.'
+    : 'You spun too many times. Your punishment (and your reward): cook something new from somewhere new.';
+
   holdTagline = true;
-  taglineEl.textContent = "You've been declared INDECISIVE.";
+  taglineEl.textContent = shared ? 'A gift from the Toad' : "You've been declared INDECISIVE.";
   document.getElementById('recipeView').hidden = false;
   document.body.classList.add('indecisive');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1649,6 +1821,7 @@ function revealRecipe() {
 
 document.getElementById('backToRoad').addEventListener('click', () => {
   setSpins(0);
+  if (location.search) history.replaceState(null, '', location.pathname); // drop ?recipe=
   document.body.classList.remove('indecisive');
   document.getElementById('recipeView').hidden = true;
   holdTagline = false;
@@ -1677,6 +1850,8 @@ function reveal() {
   cuisineTag.textContent = meta.label;
   townDisplay.textContent = activeTowns.size > 1 ? '📍 ' + TOWNS[chosen.town] : '';
   showMapLinks(chosen);
+  currentPick = chosen;
+  document.getElementById('sharePickStatus').textContent = '';
   showRecommendation(chosen);
 
   burstSparkles();
@@ -1800,6 +1975,7 @@ function revealKoks() {
   document.getElementById('mapAlt').hidden = true;
   const web = document.getElementById('webLink');
   web.hidden = false;
+  document.getElementById('sharePick').hidden = true; // nothing to share for KOKS
   web.href = 'https://koks.fo/';
   mapLinks.classList.remove('hidden');
 
@@ -1874,6 +2050,11 @@ function init() {
     document.getElementById('contactBtn').click();
     history.replaceState(null, '', location.pathname);
   }
+
+  // Shared recipe links: sonoralunchtoad.com/?recipe=05
+  const sharedId = new URLSearchParams(location.search).get('recipe');
+  const sharedRecipe = sharedId && RECIPES.find(r => r.id === sharedId.padStart(2, '0'));
+  if (sharedRecipe) revealRecipe(sharedRecipe);
 }
 
 document.getElementById('chainCheck').addEventListener('change', e => {
