@@ -619,6 +619,7 @@ function cleanBoard(list) {
                  Number.isInteger(e.score) && e.score >= 0 && e.score < 2e5)
     .map(e => ({ name: e.name, score: e.score, date: String(e.date || '').slice(0, 10) }))
     .sort((a, b) => b.score - a.score)
+    .filter((e, i, list) => list.findIndex(x => x.name === e.name) === i) // one score per name: their best
     .slice(0, BOARD_SIZE);
 }
 function localBoard() {
@@ -661,9 +662,11 @@ function renderBoard(el, board, highlight) {
     el.innerHTML = '<li class="board-empty">No scores yet. Be the first tongue!</li>';
     return;
   }
+  const exactShown = !!highlight && board.some(e => e.name === highlight.name && e.score === highlight.score && e.date === highlight.date);
   board.forEach((e, i) => {
     const li = document.createElement('li');
-    if (highlight && e.name === highlight.name && e.score === highlight.score && e.date === highlight.date) li.classList.add('me');
+    // Highlight the score just saved, or (if it didn't beat their best) their best row
+    if (highlight && e.name === highlight.name && (!exactShown || (e.score === highlight.score && e.date === highlight.date))) li.classList.add('me');
     if (i === 0) li.classList.add('first');
     [i === 0 ? '👑' : (i + 1) + '.', e.name, e.score.toLocaleString()].forEach((t, k) => {
       const span = document.createElement('span');

@@ -111,13 +111,20 @@ async function keyMatches(given, secret) {
   return diff === 0;
 }
 
-// Top N rows for a board. Fetches a few extra so any rows the name filter
-// rejects (e.g. if the blocklist grows) don't leave the board short.
+// The board shows ONE score per name: each player's best (ties go to the
+// earliest). All their other scores stay in the table, they just aren't shown.
+// Fetches a few extra so any rows the name filter rejects (e.g. if the
+// blocklist grows) don't leave the board short.
+const BOARD_SQL = `
+  SELECT name, score, level, date FROM (
+    SELECT name, score, level, date, id,
+           ROW_NUMBER() OVER (PARTITION BY name ORDER BY score DESC, id ASC) AS pick
+    FROM scores WHERE board = ?
+  ) WHERE pick = 1
+  ORDER BY score DESC, id ASC
+  LIMIT ?`;
 async function loadBoard(env, board) {
-  const { results } = await env.DB
-    .prepare('SELECT name, score, level, date FROM scores WHERE board = ? ORDER BY score DESC, id ASC LIMIT ?')
-    .bind(board.key, board.size + 10)
-    .all();
+  const { results } = await env.DB.prepare(BOARD_SQL).bind(board.key, board.size + 10).all();
   return cleanBoard(results, board);
 }
 function insertStatement(env, board, e) {

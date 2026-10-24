@@ -703,6 +703,7 @@ function cleanBoard(list) {
     .filter(e => e && typeof e.name === 'string' && /^[A-Z0-9]{1,15}$/.test(e.name) && !nameBlocked(e.name) && Number.isInteger(e.score) && e.score >= 0 && e.score < 1e7)
     .map(e => ({ name: e.name, score: e.score, level: Math.max(1, Math.min(999, parseInt(e.level, 10) || 1)), date: String(e.date || '').slice(0, 10) }))
     .sort((a, b) => b.score - a.score)
+    .filter((e, i, list) => list.findIndex(x => x.name === e.name) === i) // one score per name: their best
     .slice(0, BOARD_SIZE);
 }
 
@@ -828,7 +829,8 @@ document.getElementById('initialsForm').addEventListener('submit', async e => {
   try {
     const board = await saveToBoard(entry);
     form.hidden = true;
-    renderBoard(boardEl, board, board.find(x => x.name === entry.name && x.score === entry.score && x.date === entry.date));
+    renderBoard(boardEl, board, board.find(x => x.name === entry.name && x.score === entry.score && x.date === entry.date) ||
+                                board.find(x => x.name === entry.name)); // didn't beat their best: highlight their best
     refreshStartBoard();
   } catch (err) {
     boardError(boardEl, err);
