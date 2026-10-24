@@ -1,4 +1,5 @@
-// Lunch Toad API: a Cloudflare Worker backed by Workers KV.
+// Lunch Toad API: a Cloudflare Worker. High scores are stored in Cloudflare D1
+// (one row per score, see schema.sql); Workers KV holds the save rate limit.
 //
 // Holds the shared high-score boards so the website itself has no secrets in it.
 // Each board has the same three calls:
@@ -7,12 +8,18 @@
 //   POST /<board>   -> add one score                 anyone; the Worker checks it
 //        body: { name, score, level? }
 //   PUT  /<board>   -> replace the whole board       needs header X-Edit-Key = secret EDIT_KEY
-//        body: { scores: [...] }
+//        body: { scores: [...] }                    (deletes that board's rows, inserts these)
 //
-// Boards (see BOARDS):  /scores         Toad Road      (KV key "scores")
-//                       /tongue-scores  Tongue Time    (KV key "tongue-scores")
+// Boards (see BOARDS):  /scores         Toad Road      (rows with board = 'scores')
+//                       /tongue-scores  Tongue Time    (rows with board = 'tongue-scores')
 //
-// KV binding: LUNCH_KV. Secret: EDIT_KEY (set with `wrangler secret put EDIT_KEY`, never in a file).
+// Why D1 and not KV for scores: KV is eventually consistent (reads can be up to
+// ~60s stale), so "read board, add score, write board" lost scores when two
+// people saved close together. Each score is now its own INSERT, so nothing
+// can be overwritten, and every score ever saved is kept (handy for recovery).
+//
+// Bindings: DB (D1 "lunch-toad"), LUNCH_KV (rate limit; also the old pre-D1 boards).
+// Secret: EDIT_KEY (set with `wrangler secret put EDIT_KEY`, never in a file).
 
 const ALLOWED_ORIGINS = [
   'https://sonoralunchtoad.com',
@@ -104,9 +111,19 @@ async function keyMatches(given, secret) {
   return diff === 0;
 }
 
+// Top N rows for a board. Fetches a few extra so any rows the name filter
+// rejects (e.g. if the blocklist grows) don't leave the board short.
 async function loadBoard(env, board) {
-  try { return cleanBoard((await env.LUNCH_KV.get(board.key, 'json') || {}).scores, board); }
-  catch (e) { return []; }
+  const { results } = await env.DB
+    .prepare('SELECT name, score, level, date FROM scores WHERE board = ? ORDER BY score DESC, id ASC LIMIT ?')
+    .bind(board.key, board.size + 10)
+    .all();
+  return cleanBoard(results, board);
+}
+function insertStatement(env, board, e) {
+  return env.DB
+    .prepare('INSERT INTO scores (board, name, score, level, date) VALUES (?, ?, ?, ?, ?)')
+    .bind(board.key, e.name, e.score, board.hasLevel ? e.level : null, e.date);
 }
 
 // Light rate limit: a few saves per minute per IP. KV is eventually consistent,
@@ -152,9 +169,8 @@ export default {
       const entry = cleanEntry({ ...body.data, date: todayPacific() }, board);
       if (!entry) return json({ error: 'score not accepted' }, 422, origin);
       if (await rateLimited(env, request)) return json({ error: 'slow down' }, 429, origin, { 'Retry-After': '60' });
-      const scores = cleanBoard([...(await loadBoard(env, board)), entry], board);
-      await env.LUNCH_KV.put(board.key, JSON.stringify({ scores }));
-      return json({ scores, entry }, 200, origin);
+      await insertStatement(env, board, entry).run();
+      return json({ scores: await loadBoard(env, board), entry }, 200, origin);
     }
 
     if (request.method === 'PUT') {
@@ -165,9 +181,13 @@ export default {
       if (body.tooBig) return json({ error: 'too big' }, 413, origin);
       if (body.invalid) return json({ error: 'invalid JSON' }, 400, origin);
       if (!body.data || !Array.isArray(body.data.scores)) return json({ error: 'expected { "scores": [...] }' }, 400, origin);
-      const scores = cleanBoard(body.data.scores, board);
-      await env.LUNCH_KV.put(board.key, JSON.stringify({ scores }));
-      return json({ scores }, 200, origin);
+      // Keeps every valid row sent (not just the top N), so nothing is trimmed by accident.
+      const rows = body.data.scores.map(e => cleanEntry(e, board)).filter(Boolean);
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM scores WHERE board = ?').bind(board.key),
+        ...rows.map(e => insertStatement(env, board, e)),
+      ]);
+      return json({ scores: await loadBoard(env, board) }, 200, origin);
     }
 
     return json({ error: 'method not allowed' }, 405, origin, { 'Allow': 'GET, POST, PUT, OPTIONS' });

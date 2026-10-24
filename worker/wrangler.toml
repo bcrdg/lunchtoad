@@ -8,3 +8,10 @@ workers_dev = true
 [[kv_namespaces]]
 binding = "LUNCH_KV"
 id = "9d38890e58f443f6b5a8375c4ebae6b4"
+
+# High scores live here (one row per score; see schema.sql). KV above is now
+# only used for the save rate limit and as the old pre-D1 copy of the boards.
+[[d1_databases]]
+binding = "DB"
+database_name = "lunch-toad"
+database_id = "12c6806d-7c6d-4ecb-aab3-0a90a5ca16df"
