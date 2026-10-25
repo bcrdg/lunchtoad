@@ -5,6 +5,8 @@
 // Each board has the same three calls:
 //
 //   GET  /<board>   -> { scores: [...] }            anyone (allowed sites only, via CORS)
+//   GET  /<board>?range=week -> { scores, range }    the "This week" board: top 10 of
+//                                                    scores saved in the last 7 days
 //   POST /<board>   -> add one score                 anyone; the Worker checks it
 //        body: { name, score, level? }
 //   PUT  /<board>   -> replace the whole board       needs header X-Edit-Key = secret EDIT_KEY
@@ -30,6 +32,7 @@ const BOARDS = {
   '/scores':        { key: 'scores',        size: 10, maxScore: 1e7, hasLevel: true },   // Toad Road: top 10
   '/tongue-scores': { key: 'tongue-scores', size: 20, maxScore: 2e5, hasLevel: false },  // Tongue Time: top 20 (45s rounds)
 };
+const WEEK_SIZE = 10; // "This week" boards are top 10 for every game
 const MAX_PUT_BYTES = 200 * 1024;
 const MAX_POST_BYTES = 1024;
 const SAVES_PER_MINUTE = 5; // per IP address, across all boards
@@ -115,17 +118,25 @@ async function keyMatches(given, secret) {
 // earliest). All their other scores stay in the table, they just aren't shown.
 // Fetches a few extra so any rows the name filter rejects (e.g. if the
 // blocklist grows) don't leave the board short.
-const BOARD_SQL = `
+// The weekly board is the same query limited to rows saved in the last 7 days
+// (created_at is set by D1 in UTC), so it's each name's best of the week.
+const boardSql = (where) => `
   SELECT name, score, level, date FROM (
     SELECT name, score, level, date, id,
            ROW_NUMBER() OVER (PARTITION BY name ORDER BY score DESC, id ASC) AS pick
-    FROM scores WHERE board = ?
+    FROM scores WHERE board = ?${where}
   ) WHERE pick = 1
   ORDER BY score DESC, id ASC
   LIMIT ?`;
+const BOARD_SQL = boardSql('');
+const WEEK_SQL = boardSql(" AND created_at >= datetime('now', '-7 days')");
 async function loadBoard(env, board) {
   const { results } = await env.DB.prepare(BOARD_SQL).bind(board.key, board.size + 10).all();
   return cleanBoard(results, board);
+}
+async function loadWeek(env, board) {
+  const { results } = await env.DB.prepare(WEEK_SQL).bind(board.key, WEEK_SIZE + 10).all();
+  return cleanBoard(results, { ...board, size: WEEK_SIZE });
 }
 function insertStatement(env, board, e) {
   return env.DB
@@ -166,6 +177,9 @@ export default {
     if (!board) return json({ error: 'not found' }, 404, origin);
 
     if (request.method === 'GET') {
+      if (url.searchParams.get('range') === 'week') {
+        return json({ scores: await loadWeek(env, board), range: 'week' }, 200, origin);
+      }
       return json({ scores: await loadBoard(env, board) }, 200, origin);
     }
 

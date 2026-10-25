@@ -164,6 +164,21 @@ canvas { display: block; width: 100%; height: auto; }
 .board li.first.me { outline: 2px solid var(--hot-pink); }
 @keyframes goldShimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 @media (prefers-reduced-motion: reduce) { .board li.first { animation: none; } }
+/* Start screen: the all-time and "This week" boards slide side by side (boards.js) */
+.boards { width: min(100%, 440px); overflow: hidden; flex-shrink: 0; }
+.boards-track { display: flex; align-items: flex-start; transition: transform 0.45s ease; }
+.board-slide { flex: 0 0 100%; min-width: 0; display: flex; justify-content: center; }
+.board-slide[hidden] { display: none; }
+.board-slide .board-wrap { max-width: 100%; }
+.board-tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 6px; }
+.board-tabs[hidden], .board-tabs button[hidden] { display: none; }
+.board-tabs button {
+  font-family: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;
+  padding: 3px 10px; border-radius: 999px; cursor: pointer;
+  border: 2px solid rgba(255, 248, 231, 0.35); background: transparent; color: inherit;
+}
+.board-tabs button[aria-selected="true"] { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .boards-track { transition: none; } }
 .initials { display: flex; flex-direction: column; gap: 6px; align-items: center; font-weight: 500; }
 .initials[hidden] { display: none; }
 .initials-row { display: flex; gap: 8px; }
@@ -206,23 +221,36 @@ canvas { display: block; width: 100%; height: auto; }
         <span>🐝</span><span>Bee: don't! −5 seconds</span>
       </div>
       <button class="btn" id="startBtn">START</button>
-      <div class="board-wrap">
-        <div class="board-title">🏆 TOP 20 TONGUES</div>
-        <ol class="board" id="boardStart"><li class="board-empty">Loading…</li></ol>
+      <div class="boards" id="boardsStart">
+        <div class="board-tabs"></div>
+        <div class="boards-track">
+          <div class="board-slide" data-label="ALL-TIME">
+            <div class="board-wrap">
+              <div class="board-title">🏆 TOP 20 TONGUES</div>
+              <ol class="board" id="boardStart"><li class="board-empty">Loading…</li></ol>
+            </div>
+          </div>
+          <div class="board-slide" data-label="THIS WEEK" hidden>
+            <div class="board-wrap">
+              <div class="board-title">📅 THIS WEEK'S TONGUES</div>
+              <ol class="board" id="boardWeek"></ol>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="overlay" id="overScreen" hidden>
       <h2 id="overTitle">TIME'S UP!</h2>
       <p id="overText"></p>
       <form class="initials" id="initialsForm" hidden>
-        <label for="initials">You made the board! Your name:</label>
+        <label for="initials" id="initialsLabel">You made the board! Your name:</label>
         <div class="initials-row">
           <input id="initials" maxlength="15" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="TOADMASTER">
           <button class="btn small" type="submit" id="saveScore">SAVE</button>
         </div>
       </form>
       <div class="board-wrap">
-        <div class="board-title">🏆 TOP 20 TONGUES</div>
+        <div class="board-title" id="overBoardTitle">🏆 TOP 20 TONGUES</div>
         <ol class="board" id="boardOver"></ol>
       </div>
       <button class="btn" id="againBtn">AGAIN</button>
@@ -234,6 +262,7 @@ canvas { display: block; width: 100%; height: auto; }
 </main>
 
 <script src="names.js"></script>
+<script src="boards.js"></script>
 <script>
 // ---------------------------------------------------------------------------
 // Tongue Time: tap the flies, the toad's tongue grabs them.
@@ -653,13 +682,14 @@ async function saveToBoard(entry) {
 function qualifies(board, s) {
   return s > 0 && (board.length < BOARD_SIZE || s > board[board.length - 1].score);
 }
-function renderBoard(el, board, highlight) {
+function renderBoard(el, board, highlight, emptyText) {
   el.innerHTML = '';
   const twoCol = board.length > 10;
   el.classList.toggle('two-col', twoCol);
   if (el.parentElement) el.parentElement.classList.toggle('wide', twoCol);
   if (!board.length) {
-    el.innerHTML = '<li class="board-empty">No scores yet. Be the first tongue!</li>';
+    el.innerHTML = '<li class="board-empty"></li>';
+    el.firstChild.textContent = emptyText || 'No scores yet. Be the first tongue!';
     return;
   }
   const exactShown = !!highlight && board.some(e => e.name === highlight.name && e.score === highlight.score && e.date === highlight.date);
@@ -681,8 +711,30 @@ function boardError(el, err) {
   el.innerHTML = '<li class="board-empty">' +
     (err && err.message === 'slow' ? 'Whoa, slow down! Try saving again in a minute.' : 'Leaderboard is napping. Try again later.') + '</li>';
 }
+// "This week" board (top 10 of the last 7 days, from the Worker). null = not
+// available (offline, or the Worker is down), and then only all-time shows.
+async function loadWeek() {
+  try { return cleanBoard(await fetchWeekBoard(SCORES_URL)).slice(0, WEEK_SIZE); } catch (e) { return null; }
+}
+function qualifiesWeek(week, s) {
+  return !!week && s > 0 && (week.length < WEEK_SIZE || s > week[week.length - 1].score);
+}
+const startBoards = boardCarousel(document.getElementById('boardsStart'), 6000);
 async function refreshStartBoard() {
-  renderBoard(document.getElementById('boardStart'), await loadBoard());
+  const [all, week] = await Promise.all([loadBoard(), loadWeek()]);
+  renderBoard(document.getElementById('boardStart'), all);
+  if (week) renderBoard(document.getElementById('boardWeek'), week, null, 'No scores yet this week. Be the first tongue!');
+  startBoards.setAvailable(1, !!week);
+}
+// The game-over screen shows the all-time board, or this week's board when
+// the score only made the weekly top 10.
+const OVER_TITLES = { all: '🏆 TOP 20 TONGUES', week: "📅 THIS WEEK'S TONGUES" };
+let overRange = 'all';
+function setOverRange(range) {
+  overRange = range;
+  document.getElementById('overBoardTitle').textContent = OVER_TITLES[range];
+  document.getElementById('initialsLabel').textContent =
+    range === 'week' ? "You made this week's top 10! Your name:" : 'You made the board! Your name:';
 }
 
 const initialsForm = document.getElementById('initialsForm');
@@ -701,7 +753,8 @@ initialsForm.addEventListener('submit', async e => {
   btn.disabled = true;
   btn.textContent = '...';
   try {
-    const board = await saveToBoard(entry);
+    let board = await saveToBoard(entry);
+    if (overRange === 'week') board = (await loadWeek()) || board;
     initialsForm.hidden = true;
     renderBoard(boardEl, board, entry);
     refreshStartBoard();
@@ -742,10 +795,14 @@ async function showBoardAfterGame(finalScore) {
   initialsForm.hidden = true;
   initialsForm.dataset.score = finalScore;
   boardEl.innerHTML = '<li class="board-empty">Loading…</li>';
-  const board = await loadBoard();
+  setOverRange('all');
+  const [board, week] = await Promise.all([loadBoard(), loadWeek()]);
   if (state !== 'over') return; // they already started another round
-  renderBoard(boardEl, board);
-  if (qualifies(board, finalScore)) {
+  const madeAll = qualifies(board, finalScore);
+  const madeWeek = !madeAll && qualifiesWeek(week, finalScore);
+  setOverRange(madeWeek ? 'week' : 'all');
+  renderBoard(boardEl, madeWeek ? week : board);
+  if (madeAll || madeWeek) {
     initialsForm.hidden = false;
     try { initialsInput.value = cleanName(localStorage.getItem(NAME_KEY)); } catch (e) {}
     initialsInput.focus();
