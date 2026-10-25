@@ -1535,6 +1535,9 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
       <label>Message
         <textarea name="message" rows="5" maxlength="2000" required></textarea>
       </label>
+      <!-- Spam trap: hidden from people; bots that fill it in are dropped by Formspree -->
+      <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true"
+             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
       <button type="submit" class="contact-submit" id="contactSubmit">SEND IT</button>
       <p class="contact-status" id="contactStatus" role="status"></p>
     </form>
@@ -1603,7 +1606,7 @@ const TOWNS = {
 };
 const DEFAULT_TOWNS = ['sonora'];
 
-const FORMSPREE_ENDPOINT = ''; // e.g. 'https://formspree.io/f/xxxxxxx' — contact form is inactive until set
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mvkkkprg'; // contact form → Formspree → owner's email. Blank = form off
 
 const restaurants = [
   ...LOCAL_RESTAURANTS.map(r => ({ ...r, chain: false })), // may carry rec: { dish, desc }
@@ -2004,17 +2007,28 @@ contactForm.addEventListener('submit', async e => {
   const btn = document.getElementById('contactSubmit');
   btn.disabled = true;
   contactStatus.textContent = 'Sending...';
+  const data = new FormData(contactForm);
+  // Email subject Formspree uses, e.g. "Lunch Toad: Add a restaurant"
+  data.append('_subject', 'Lunch Toad: ' + (data.get('topic') || 'Message'));
+  data.append('page', location.href);
   try {
     const res = await fetch(FORMSPREE_ENDPOINT, {
       method: 'POST',
-      body: new FormData(contactForm),
+      body: data,
       headers: { Accept: 'application/json' },
     });
-    if (!res.ok) throw new Error(res.status);
+    if (!res.ok) {
+      // Formspree explains what's wrong (e.g. a bad email address) in "errors"
+      let msg = '';
+      try { msg = ((await res.json()).errors || []).map(x => x.message).join(' '); } catch (x) {}
+      throw new Error(msg || String(res.status));
+    }
     contactForm.reset();
     contactStatus.textContent = 'The Toad has received your message. 🐸';
   } catch (err) {
-    contactStatus.textContent = 'Something went wrong. Try again in a bit.';
+    contactStatus.textContent = /^\d+$/.test(err.message) || !err.message
+      ? 'Something went wrong. Try again in a bit.'
+      : 'Hmm: ' + err.message;
   } finally {
     btn.disabled = false;
   }
