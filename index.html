@@ -3223,8 +3223,8 @@ init();
   const IDLE_MS = 10000;
   // Flight speed in pixels per second across the window, with a minimum time so
   // it isn't a blur on a phone. On a wide desktop window it moves much faster.
-  const FIRST_FLIGHT = { speed: 650, minMs: 2200 }; // quick first pass
-  const IDLE_FLIGHT = { speed: 480, minMs: 3000 };  // later passes
+  const FIRST_FLIGHT = { speed: 500, minMs: 2700 }; // quick first pass
+  const IDLE_FLIGHT = { speed: 370, minMs: 3600 };  // later passes
   const lunchBtnEl = document.getElementById('lunchBtn');
   // Fixed to the window: move it out of the toad stage so no parent affects it.
   document.body.appendChild(fly);
