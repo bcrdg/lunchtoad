@@ -3225,6 +3225,8 @@ init();
   // it isn't a blur on a phone. On a wide desktop window it moves much faster.
   const FIRST_FLIGHT = { speed: 500, minMs: 2700 }; // quick first pass
   const IDLE_FLIGHT = { speed: 370, minMs: 3600 };  // later passes
+  // Once the fly is 25% of the way across, it slows to 75% speed for the rest.
+  const SLOW_AT = 0.25, SLOW_SPEED = 0.75;
   const lunchBtnEl = document.getElementById('lunchBtn');
   // Fixed to the window: move it out of the toad stage so no parent affects it.
   document.body.appendChild(fly);
@@ -3292,7 +3294,8 @@ init();
     fly.classList.add('flying');
     fly.style.transform = '';
     function step(now) {
-      const t = (now - start) / dur;
+      const e = (now - start) / dur; // fraction of the full-speed flight time
+      const t = e < SLOW_AT ? e : SLOW_AT + (e - SLOW_AT) * SLOW_SPEED;
       if (t >= 1 || busy()) {
         land();
         lastActive = performance.now(); // the next fly waits a full idle stretch after this one leaves
