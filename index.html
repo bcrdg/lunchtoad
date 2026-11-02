@@ -501,10 +501,6 @@ body.revealed .result-card {
 }
 .cuisine-subs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .cuisine-subs .cuisine-pill { font-size: 0.8rem; padding: 5px 10px; }
-.cuisine-pill.group-pill.partial {
-  background: rgba(255, 210, 63, 0.35);
-  border-color: var(--yellow);
-}
 
 .warning-msg {
   color: var(--hot-pink);
@@ -1574,11 +1570,11 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
 
 const cuisineMeta = {
   american:  { emoji: "🍔", label: "BURGER VIBES" },
-  italian:   { emoji: "🍕", label: "MAMMA MIA" },
   bbq:       { emoji: "🍖", label: "SMOKE SHOW" },
   breakfast: { emoji: "🥞", label: "RISE & DINE" },
   sandwich:  { emoji: "🥪", label: "STACKED" },
   // World Flavors (WORLD_FLAVORS below)
+  italian:   { emoji: "🍕", label: "MAMMA MIA" },
   mexican:   { emoji: "🌮", label: "VIVA MÉXICO" },
   japanese:  { emoji: "🍣", label: "SUSHI & SIZZLE" },
   chinese:   { emoji: "🥡", label: "WOK & ROLL" },
@@ -1591,8 +1587,11 @@ const cuisineMeta = {
 // Cuisines that appear as "Customize food type" checkboxes.
 // Coffee, dessert and drinks places are controlled by "More than lunch?" instead.
 const FOOD_TYPES = Object.keys(cuisineMeta).filter(k => !['coffee', 'dessert', 'drinks'].includes(k));
-// Grouped under one "World Flavors" pill in Customize food type; each can still be picked alone.
-const WORLD_FLAVORS = ['mexican', 'japanese', 'chinese', 'thai', 'mediterranean'];
+// Everything that isn't American food sits under one "World Flavors" box in
+// Customize food type. Checking it shows a box for each, so you can keep World
+// Flavors on but drop, say, Chinese. Unchecked = none of them.
+const WORLD_FLAVORS = ['italian', 'mexican', 'japanese', 'chinese', 'thai', 'mediterranean'];
+let worldFlavors = true;
 // Food types saved by older versions of the site -> today's keys.
 const OLD_CUISINES = { asian: ['japanese', 'chinese', 'thai'], greek: ['mediterranean'], hotdog: [] };
 
@@ -1706,6 +1705,9 @@ function loadState() {
       }
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines.flatMap(c => OLD_CUISINES[c] || [c]).filter(c => cuisineMeta[c]));
+        // Saved before the World Flavors box existed: on if any of its cuisines were picked.
+        worldFlavors = typeof data.world === 'boolean' ? data.world
+          : WORLD_FLAVORS.some(c => activeCuisines.has(c));
       }
       // An empty town list is never restored: "no towns" is only meant for the
       // KOKS easter egg in the current visit, so new visits start from the default.
@@ -1728,6 +1730,7 @@ function saveFilters() {
     moreThanLunch,
     meals: [...activeMeals],
     cuisines: [...activeCuisines],
+    world: worldFlavors,
     towns: [...activeTowns],
   }));
 }
@@ -1751,7 +1754,8 @@ function getActiveRestaurants() {
   // Food-type filter only applies to food cuisines; dessert/drinks spots are
   // already governed by the meal checkboxes.
   if (customFood) {
-    list = list.filter(r => !FOOD_TYPES.includes(r.cuisine) || activeCuisines.has(r.cuisine));
+    list = list.filter(r => !FOOD_TYPES.includes(r.cuisine) ||
+      (activeCuisines.has(r.cuisine) && (worldFlavors || !WORLD_FLAVORS.includes(r.cuisine))));
   }
   return list;
 }
@@ -1830,27 +1834,27 @@ function buildCuisineFilters() {
       changed();
     }));
   });
-  // World Flavors: the big pill turns them all on or off; the small ones pick just some.
+  // World Flavors: its own box. When it's checked, a box for each cuisine shows up.
   const group = document.createElement('div');
   group.className = 'cuisine-group';
-  const onCount = WORLD_FLAVORS.filter(k => activeCuisines.has(k)).length;
-  const all = pill('🌍 WORLD FLAVORS', onCount === WORLD_FLAVORS.length, on => {
-    WORLD_FLAVORS.forEach(k => on ? activeCuisines.add(k) : activeCuisines.delete(k));
+  group.appendChild(pill('🌍 WORLD FLAVORS', worldFlavors, on => {
+    worldFlavors = on;
+    // Turning it on with every cuisine unchecked would match nothing, so check them all.
+    if (on && !WORLD_FLAVORS.some(k => activeCuisines.has(k))) WORLD_FLAVORS.forEach(k => activeCuisines.add(k));
     changed();
-  });
-  all.classList.add('group-pill');
-  all.classList.toggle('partial', onCount > 0 && onCount < WORLD_FLAVORS.length);
-  group.appendChild(all);
-  const subs = document.createElement('div');
-  subs.className = 'cuisine-subs';
-  WORLD_FLAVORS.forEach(key => {
-    const meta = cuisineMeta[key];
-    subs.appendChild(pill(`${meta.emoji} ${meta.label}`, activeCuisines.has(key), on => {
-      if (on) activeCuisines.add(key); else activeCuisines.delete(key);
-      changed();
-    }));
-  });
-  group.appendChild(subs);
+  }));
+  if (worldFlavors) {
+    const subs = document.createElement('div');
+    subs.className = 'cuisine-subs';
+    WORLD_FLAVORS.forEach(key => {
+      const meta = cuisineMeta[key];
+      subs.appendChild(pill(`${meta.emoji} ${meta.label}`, activeCuisines.has(key), on => {
+        if (on) activeCuisines.add(key); else activeCuisines.delete(key);
+        changed();
+      }));
+    });
+    group.appendChild(subs);
+  }
   container.appendChild(group);
 }
 
