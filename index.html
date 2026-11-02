@@ -491,16 +491,9 @@ body.revealed .result-card {
   box-shadow: 2px 2px 0 var(--ink);
 }
 .cuisine-pill input { display: none; }
-/* World Flavors group inside Customize food type */
-.cuisine-group {
-  flex-basis: 100%;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  margin-top: 4px; padding: 10px;
-  border: 2px solid rgba(255, 248, 231, 0.2);
-  border-radius: 14px;
-}
-.cuisine-subs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.cuisine-subs .cuisine-pill { font-size: 0.8rem; padding: 5px 10px; }
+/* Per-category count on the food boxes */
+.cuisine-pill small { font-size: 0.75rem; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.cuisine-pill.empty { opacity: 0.45; }
 
 .warning-msg {
   color: var(--hot-pink);
@@ -1182,7 +1175,11 @@ body.fate .restaurant-name { font-size: clamp(1.2rem, 4.5vw, 1.6rem); }
 }
 
 /* Cuisine eye color themes */
-body.cuisine-american  { --c1: #DC143C; --c2: #1E40AF; }
+body.cuisine-burgers   { --c1: #DC143C; --c2: #1E40AF; }
+body.cuisine-pub       { --c1: #F5A623; --c2: #3B2410; }
+body.cuisine-steakhouse { --c1: #B22222; --c2: #2B1A12; }
+body.cuisine-chicken   { --c1: #FF8C00; --c2: #C8102E; }
+body.cuisine-quickbites { --c1: #FFD23F; --c2: #DC143C; }
 body.cuisine-mexican   { --c1: #00964D; --c2: #C8102E; }
 body.cuisine-italian   { --c1: #008C45; --c2: #CD212A; }
 body.cuisine-japanese  { --c1: #BC002D; --c2: #FFFFFF; }
@@ -1568,32 +1565,44 @@ body.warping .toad-body-wrap { animation: toadWarp 1.1s ease-in forwards; }
 <script src="recipes.js"></script>
 <script>
 
+// Food categories. `name` is the plain name on the filter boxes and the restaurants
+// page; `emoji` + `label` are the toad's reveal. A restaurant's `cuisine` is its main
+// category (reveal + eye colors); `also: [...]` adds more categories it should match,
+// like the food apps do (B E Wok & Sushi is Japanese and Chinese).
+// The order here is the order of the filter boxes.
 const cuisineMeta = {
-  american:  { emoji: "🍔", label: "BURGER VIBES" },
-  bbq:       { emoji: "🍖", label: "SMOKE SHOW" },
-  breakfast: { emoji: "🥞", label: "RISE & DINE" },
-  sandwich:  { emoji: "🥪", label: "STACKED" },
-  // World Flavors (WORLD_FLAVORS below)
-  italian:   { emoji: "🍕", label: "MAMMA MIA" },
-  mexican:   { emoji: "🌮", label: "VIVA MÉXICO" },
-  japanese:  { emoji: "🍣", label: "SUSHI & SIZZLE" },
-  chinese:   { emoji: "🥡", label: "WOK & ROLL" },
-  thai:      { emoji: "🍛", label: "THAI-RIFFIC" },
-  mediterranean: { emoji: "🥙", label: "OPA!" },
-  coffee:    { emoji: "☕", label: "BREW TIME" },
-  dessert:   { emoji: "🍦", label: "SWEET TOOTH" },
-  drinks:    { emoji: "🍺", label: "BOTTOMS UP" },
+  burgers:    { emoji: "🍔", label: "BURGER VIBES",   name: "Burgers" },
+  italian:    { emoji: "🍕", label: "MAMMA MIA",      name: "Pizza & Italian" },
+  mexican:    { emoji: "🌮", label: "VIVA MÉXICO",    name: "Mexican" },
+  sandwich:   { emoji: "🥪", label: "STACKED",        name: "Sandwiches & Deli" },
+  pub:        { emoji: "🍻", label: "PUB GRUB",       name: "Pub & Grill" },
+  chinese:    { emoji: "🥡", label: "WOK & ROLL",     name: "Chinese" },
+  japanese:   { emoji: "🍣", label: "SUSHI & SIZZLE", name: "Japanese & Sushi" },
+  thai:       { emoji: "🍛", label: "THAI-RIFFIC",    name: "Thai" },
+  mediterranean: { emoji: "🥙", label: "OPA!",        name: "Greek & Mediterranean" },
+  bbq:        { emoji: "🍖", label: "SMOKE SHOW",     name: "BBQ" },
+  steakhouse: { emoji: "🥩", label: "STEAK OUT",      name: "Steakhouse" },
+  chicken:    { emoji: "🍗", label: "WINGING IT",     name: "Chicken & Wings" },
+  quickbites: { emoji: "🌭", label: "SNACK ATTACK",   name: "Hot Dogs & Quick Bites" },
+  breakfast:  { emoji: "🥞", label: "RISE & DINE",    name: "Diners & Cafés" },
+  coffee:     { emoji: "☕", label: "BREW TIME",      name: "Coffee & Juice" },
+  dessert:    { emoji: "🍦", label: "SWEET TOOTH",    name: "Sweets" },
+  drinks:     { emoji: "🍺", label: "BOTTOMS UP",     name: "Drinks" },
 };
-// Cuisines that appear as "Customize food type" checkboxes.
+// Categories that appear as "Customize food type" boxes.
 // Coffee, dessert and drinks places are controlled by "More than lunch?" instead.
 const FOOD_TYPES = Object.keys(cuisineMeta).filter(k => !['coffee', 'dessert', 'drinks'].includes(k));
-// Everything that isn't American food sits under one "World Flavors" box in
-// Customize food type. Checking it shows a box for each, so you can keep World
-// Flavors on but drop, say, Chinese. Unchecked = none of them.
-const WORLD_FLAVORS = ['italian', 'mexican', 'japanese', 'chinese', 'thai', 'mediterranean'];
-let worldFlavors = true;
+// Every food category a restaurant matches (empty for coffee/dessert/drinks spots).
+function foodTags(r) {
+  return [r.cuisine, ...(Array.isArray(r.also) ? r.also : [])].filter((t, i, a) => FOOD_TYPES.includes(t) && a.indexOf(t) === i);
+}
 // Food types saved by older versions of the site -> today's keys.
-const OLD_CUISINES = { asian: ['japanese', 'chinese', 'thai'], greek: ['mediterranean'], hotdog: [] };
+const OLD_CUISINES = {
+  american: ['burgers', 'pub', 'steakhouse', 'chicken', 'quickbites'],
+  asian: ['japanese', 'chinese', 'thai'], greek: ['mediterranean'], hotdog: ['quickbites'],
+};
+// The short-lived "World Flavors" box (Nov 2026): unchecked meant none of these.
+const OLD_WORLD = ['italian', 'mexican', 'japanese', 'chinese', 'thai', 'mediterranean'];
 
 // "More than lunch?" options. A place lists every meal it's good for in `meals`;
 // it's in the pool if ANY of its meals is checked, and it's only ever in the pool once,
@@ -1705,9 +1714,7 @@ function loadState() {
       }
       if (Array.isArray(data.cuisines)) {
         activeCuisines = new Set(data.cuisines.flatMap(c => OLD_CUISINES[c] || [c]).filter(c => cuisineMeta[c]));
-        // Saved before the World Flavors box existed: on if any of its cuisines were picked.
-        worldFlavors = typeof data.world === 'boolean' ? data.world
-          : WORLD_FLAVORS.some(c => activeCuisines.has(c));
+        if (data.world === false) OLD_WORLD.forEach(c => activeCuisines.delete(c));
       }
       // An empty town list is never restored: "no towns" is only meant for the
       // KOKS easter egg in the current visit, so new visits start from the default.
@@ -1730,7 +1737,6 @@ function saveFilters() {
     moreThanLunch,
     meals: [...activeMeals],
     cuisines: [...activeCuisines],
-    world: worldFlavors,
     towns: [...activeTowns],
   }));
 }
@@ -1754,8 +1760,10 @@ function getActiveRestaurants() {
   // Food-type filter only applies to food cuisines; dessert/drinks spots are
   // already governed by the meal checkboxes.
   if (customFood) {
-    list = list.filter(r => !FOOD_TYPES.includes(r.cuisine) ||
-      (activeCuisines.has(r.cuisine) && (worldFlavors || !WORLD_FLAVORS.includes(r.cuisine))));
+    list = list.filter(r => {
+      const tags = foodTags(r);
+      return tags.length === 0 || tags.some(t => activeCuisines.has(t));
+    });
   }
   return list;
 }
@@ -1769,6 +1777,7 @@ function updateCount() {
   document.getElementById('warningMsg').classList.toggle('visible', stuck);
   document.getElementById('lunchBtn').disabled = stuck;
   updateTownCounts();
+  if (customFood) buildCuisineFilters(); // keep the per-category counts current
 }
 
 function buildTownFilters() {
@@ -1817,45 +1826,26 @@ function buildOrbit() {
 function buildCuisineFilters() {
   const container = document.getElementById('cuisineFilters');
   container.innerHTML = '';
-  function pill(text, checked, onChange) {
+  // Counts follow the towns, meals and chain settings, ignoring the food boxes themselves.
+  const pool = availableRestaurants().filter(r => activeTowns.has(r.town));
+  FOOD_TYPES.forEach(key => {
+    const meta = cuisineMeta[key];
+    const n = pool.filter(r => foodTags(r).includes(key)).length;
+    const on = activeCuisines.has(key);
     const label = document.createElement('label');
     label.className = 'cuisine-pill';
-    label.classList.toggle('active', checked);
-    label.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''}><span></span>`;
-    label.querySelector('span').textContent = text;
-    label.querySelector('input').addEventListener('change', e => onChange(e.target.checked));
-    return label;
-  }
-  function changed() { saveFilters(); updateCount(); buildCuisineFilters(); }
-  FOOD_TYPES.filter(k => !WORLD_FLAVORS.includes(k)).forEach(key => {
-    const meta = cuisineMeta[key];
-    container.appendChild(pill(`${meta.emoji} ${meta.label}`, activeCuisines.has(key), on => {
-      if (on) activeCuisines.add(key); else activeCuisines.delete(key);
-      changed();
-    }));
-  });
-  // World Flavors: its own box. When it's checked, a box for each cuisine shows up.
-  const group = document.createElement('div');
-  group.className = 'cuisine-group';
-  group.appendChild(pill('🌍 WORLD FLAVORS', worldFlavors, on => {
-    worldFlavors = on;
-    // Turning it on with every cuisine unchecked would match nothing, so check them all.
-    if (on && !WORLD_FLAVORS.some(k => activeCuisines.has(k))) WORLD_FLAVORS.forEach(k => activeCuisines.add(k));
-    changed();
-  }));
-  if (worldFlavors) {
-    const subs = document.createElement('div');
-    subs.className = 'cuisine-subs';
-    WORLD_FLAVORS.forEach(key => {
-      const meta = cuisineMeta[key];
-      subs.appendChild(pill(`${meta.emoji} ${meta.label}`, activeCuisines.has(key), on => {
-        if (on) activeCuisines.add(key); else activeCuisines.delete(key);
-        changed();
-      }));
+    label.classList.toggle('active', on);
+    label.classList.toggle('empty', n === 0);
+    label.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}><span></span><small></small>`;
+    label.querySelector('span').textContent = `${meta.emoji} ${meta.name}`;
+    label.querySelector('small').textContent = n;
+    label.querySelector('input').addEventListener('change', e => {
+      if (e.target.checked) activeCuisines.add(key); else activeCuisines.delete(key);
+      saveFilters();
+      updateCount();
     });
-    group.appendChild(subs);
-  }
-  container.appendChild(group);
+    container.appendChild(label);
+  });
 }
 
 

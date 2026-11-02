@@ -188,10 +188,16 @@ h1 {
 <script>
 // Labels match index.html (cuisineMeta, MEALS, TOWNS).
 const CUISINES = {
-  american: "🍔 American", italian: "🍕 Italian & Pizza", bbq: "🍖 BBQ", breakfast: "🥞 Breakfast",
-  sandwich: "🥪 Sandwiches & Deli", mexican: "🌮 Mexican", japanese: "🍣 Japanese", chinese: "🥡 Chinese",
-  thai: "🍛 Thai", mediterranean: "🥙 Greek & Mediterranean", coffee: "☕ Coffee & Juice", dessert: "🍦 Sweets", drinks: "🍺 Drinks",
+  burgers: "🍔 Burgers", italian: "🍕 Pizza & Italian", mexican: "🌮 Mexican", sandwich: "🥪 Sandwiches & Deli",
+  pub: "🍻 Pub & Grill", chinese: "🥡 Chinese", japanese: "🍣 Japanese & Sushi", thai: "🍛 Thai",
+  mediterranean: "🥙 Greek & Mediterranean", bbq: "🍖 BBQ", steakhouse: "🥩 Steakhouse",
+  chicken: "🍗 Chicken & Wings", quickbites: "🌭 Hot Dogs & Quick Bites", breakfast: "🥞 Diners & Cafés",
+  coffee: "☕ Coffee & Juice", dessert: "🍦 Sweets", drinks: "🍺 Drinks",
 };
+// Main category first, then any extras from `also`.
+function cuisinesOf(r) {
+  return [r.cuisine, ...(Array.isArray(r.also) ? r.also : [])].filter((c, i, a) => a.indexOf(c) === i);
+}
 const MEALS = {
   lunch: "Lunch", breakfast: "Breakfast", dinner: "Dinner",
   coffee: "Coffee & Juice", drinks: "Drinks (21+)", sweets: "Sweet Tooth",
@@ -239,7 +245,7 @@ function placeCard(r) {
   p.appendChild(el('div', 'name', r.name));
 
   const tags = el('div', 'tags');
-  tags.appendChild(el('span', 'tag cuisine', CUISINES[r.cuisine] || r.cuisine));
+  cuisinesOf(r).forEach(c => tags.appendChild(el('span', 'tag cuisine', CUISINES[c] || c)));
   r.meals.forEach(m => tags.appendChild(el('span', 'tag', MEALS[m] || m)));
   if (r.chain) tags.appendChild(el('span', 'tag chain', '🏢 Chain'));
   p.appendChild(tags);
@@ -274,7 +280,7 @@ function render() {
   const shown = ALL.filter(r => {
     if (!chainsBox.checked && r.chain) return false;
     if (!words.length) return true;
-    const hay = [r.name, CUISINES[r.cuisine], TOWNS[r.town], r.address, r.meals.map(m => MEALS[m]).join(' '),
+    const hay = [r.name, cuisinesOf(r).map(c => CUISINES[c]).join(' '), TOWNS[r.town], r.address, r.meals.map(m => MEALS[m]).join(' '),
                  r.rec && r.rec.dish].join(' ').toLowerCase();
     return words.every(w => hay.includes(w));
   });
