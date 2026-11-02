@@ -661,6 +661,14 @@ body.revealed .result-card {
   border: 3px solid var(--ink);
   background: #fff;
 }
+.preview-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 900;
+  background: var(--hot-pink); color: var(--cream);
+  font-weight: 700; font-size: 0.85rem; text-align: center;
+  padding: 6px 12px; letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
 .coupon-test {
   display: inline-block;
   font-family: 'Bagel Fat One', cursive;
@@ -1617,6 +1625,22 @@ const restaurants = [
    const meals = (r.meals || []).filter(m => MEALS[m]);
    return { ...r, meals: meals.length ? meals : defaultMeals(r) };
  });
+// ---- Restaurant preview links ----
+// sonoralunchtoad.com/?preview=kobe-japanese-steakhouse
+// Every spin in that tab lands on that restaurant, and its coupon (or a placeholder)
+// pops up marked PREVIEW. Nothing is saved: no coupon, no visit, no spin count,
+// no shuffle history. The link part is the full name, lowercased, "&" -> "and",
+// apostrophes dropped, everything else that isn't a letter or digit -> "-".
+function slugify(name) {
+  return name.toLowerCase().replace(/&/g, ' and ').replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+const previewPick = (() => {
+  try {
+    const want = new URLSearchParams(location.search).get('preview');
+    return want ? restaurants.find(r => slugify(r.name) === slugify(want)) || null : null;
+  } catch (e) { return null; }
+})();
 let customFood = false;
 let includeChains = false; // locally owned only by default
 let soundOn = true;        // sound effects, on by default
@@ -1861,6 +1885,12 @@ function grantCoupon(r) {
   updateCouponButton();
   return entry;
 }
+// Preview links: the restaurant's coupon (or the sample), shown but never saved.
+function previewCoupon(r) {
+  const c = r.coupon && r.coupon.img ? r.coupon : SAMPLE_COUPON;
+  return { restaurant: r.name, img: c.img, offer: c === SAMPLE_COUPON ? 'Your offer goes here' : (c.offer || ''),
+           got: Date.now(), preview: true, placeholder: c === SAMPLE_COUPON };
+}
 function updateCouponButton() {
   const n = activeCoupons().length;
   document.getElementById('couponCount').textContent = n;
@@ -1887,7 +1917,8 @@ function showCoupon(c, fresh) {
   couponView = { type: 'one', coupon: c };
   document.getElementById('couponTitle').textContent = fresh ? '🎟 YOU GOT A COUPON!' : '🎟 COUPON';
   couponBody.innerHTML = '';
-  if (c.test) couponBody.appendChild(couponEl('div', 'coupon-test', 'TEST · NOT A REAL OFFER'));
+  if (c.preview) couponBody.appendChild(couponEl('div', 'coupon-test', 'PREVIEW · NOT A REAL OFFER'));
+  else if (c.test) couponBody.appendChild(couponEl('div', 'coupon-test', 'TEST · NOT A REAL OFFER'));
   couponBody.appendChild(couponEl('div', 'coupon-place', c.restaurant));
   if (c.offer) couponBody.appendChild(couponEl('div', 'coupon-offer', c.offer));
   const img = couponEl('img', 'coupon-img');
@@ -1904,11 +1935,15 @@ function showCoupon(c, fresh) {
   nowEl.innerHTML = 'Now <b data-now></b>';
   live.appendChild(nowEl);
   couponBody.appendChild(live);
-  couponBody.appendChild(couponEl('p', 'coupon-note',
+  if (c.preview) couponBody.appendChild(couponEl('p', 'coupon-note',
+    'This is how your coupon pops up when the Toad picks you.' +
+    (c.placeholder ? ' Your own coupon image will go where the sample is.' : '') +
+    ' Customers can show it at the counter for 24 hours.'));
+  else couponBody.appendChild(couponEl('p', 'coupon-note',
     (fresh ? 'Saved to "See my coupons" in Lunch Options for 24 hours. ' : '') +
     'Show this live screen at the counter. Screenshots don\'t count.'));
   const actions = couponEl('div', 'coupon-actions');
-  if (activeCoupons().length > 1) {
+  if (!c.preview && activeCoupons().length > 1) {
     const all = couponEl('button', null, '🎟 ALL MY COUPONS');
     all.type = 'button';
     all.addEventListener('click', showCouponList);
@@ -1958,7 +1993,7 @@ function tickCoupon() {
   const list = activeCoupons();
   if (couponView.type === 'one') {
     const c = couponView.coupon;
-    if (!list.some(x => x.got === c.got && x.img === c.img)) { showCouponList(); updateCouponButton(); return; }
+    if (!c.preview && !list.some(x => x.got === c.got && x.img === c.img)) { showCouponList(); updateCouponButton(); return; }
     const left = couponBody.querySelector('[data-left]');
     const now = couponBody.querySelector('[data-now]');
     if (left) left.textContent = timeLeft(c);
@@ -2208,11 +2243,12 @@ function consultingText(spin) {
 }
 
 function startSearch() {
-  const koks = activeTowns.size === 0;
-  const active = koks ? restaurants : getActiveRestaurants();
+  const koks = !previewPick && activeTowns.size === 0;
+  let active = koks ? restaurants : getActiveRestaurants();
+  if (previewPick && active.length === 0) active = restaurants;
   if (active.length === 0) return;
-  const spin = getSpins() + 1;
-  setSpins(spin);
+  const spin = previewPick ? 1 : getSpins() + 1; // previews never count spins
+  if (!previewPick) setSpins(spin);
   const indecisive = !koks && spin > INDECISIVE_LIMIT;
 
   clearCuisineClasses();
@@ -2638,7 +2674,7 @@ function reveal() {
   clearInterval(cycleInterval);
   document.body.classList.remove('searching');
 
-  const chosen = drawFromBag(getActiveRestaurants());
+  const chosen = previewPick || drawFromBag(getActiveRestaurants());
   const meta = pickLabel(chosen);
 
   void document.body.offsetWidth;
@@ -2654,7 +2690,7 @@ function reveal() {
   currentPick = chosen;
   document.getElementById('sharePickStatus').textContent = '';
   showRecommendation(chosen);
-  const coupon = grantCoupon(chosen);
+  const coupon = previewPick ? previewCoupon(chosen) : grantCoupon(chosen);
 
   burstSparkles();
 
@@ -2899,6 +2935,7 @@ function countVisit() {
   } catch (e) {}
 
   let n = parseInt(getCookie(VISITS_COOKIE) || '0', 10) || 0;
+  if (previewPick) return n; // restaurant previews aren't visits
   let counted = false;
   try { counted = sessionStorage.getItem(VISIT_COUNTED_KEY) === '1'; } catch (e) {}
   if (!counted) {
@@ -3187,6 +3224,13 @@ function init() {
   if (location.hash === '#contact') {
     document.getElementById('contactBtn').click();
     history.replaceState(null, '', location.pathname);
+  }
+
+  if (previewPick) {
+    const banner = document.createElement('div');
+    banner.className = 'preview-banner';
+    banner.textContent = '👀 PREVIEW: the Toad always picks ' + previewPick.name + '. Tap FIND MY LUNCH!';
+    document.body.appendChild(banner);
   }
 
   // Shared recipe links: sonoralunchtoad.com/?recipe=05
